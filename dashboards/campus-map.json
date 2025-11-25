@@ -1,0 +1,396 @@
+{
+  "title": "SCCC Campus VoIP Map (Canvas)",
+  "uid": "sccc-campus-voip-map",
+  "schemaVersion": 38,
+  "version": 1,
+  "style": "dark",
+  "timezone": "browser",
+  "editable": true,
+  "refresh": "30s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "type": "canvas",
+      "title": "Campus VoIP Canvas",
+      "id": 1,
+      "gridPos": { "h": 30, "w": 24, "x": 0, "y": 0 },
+      "options": {
+        "background": {
+          "imageUrl": "",        /* set your campus map image here in Grafana UI */
+          "fit": "contain"
+        },
+        "elements": [
+          {
+            "type": "text",
+            "x": 50,
+            "y": 50,
+            "text": "A (Academic_A / Hobble A-wing)\nVLAN 301 – 10.30.1.0/24\nSwitches: SW-A144-1-Aruba, SW-A144-2-Aruba",
+            "fontSize": 14,
+            "color": "#f1fa8c",
+            "links": [
+              {
+                "title": "SW-A144-1-Aruba",
+                "url": "d/switching-backbone?var-sysName=SW-A144-1-Aruba",
+                "targetBlank": true
+              },
+              {
+                "title": "SW-A144-2-Aruba",
+                "url": "d/switching-backbone?var-sysName=SW-A144-2-Aruba",
+                "targetBlank": true
+              }
+            ],
+            "dataAttributes": {
+              "building": "A",
+              "vlan": "301",
+              "subnet": "10.30.1.0/24"
+            }
+          },
+          {
+            "type": "text",
+            "x": 50,
+            "y": 110,
+            "text": "AA (Academic_AA – AA105 & AA144)\nVLAN 302 – 10.30.2.0/24\nSwitches: SWA-AA105, SW-A144-1-Aruba, SW-A144-2-Aruba",
+            "fontSize": 14,
+            "color": "#f1fa8c",
+            "links": [
+              {
+                "title": "SWA-AA105",
+                "url": "d/switching-backbone?var-sysName=SWA-AA105",
+                "targetBlank": true
+              },
+              {
+                "title": "SW-A144-1-Aruba",
+                "url": "d/switching-backbone?var-sysName=SW-A144-1-Aruba",
+                "targetBlank": true
+              },
+              {
+                "title": "SW-A144-2-Aruba",
+                "url": "d/switching-backbone?var-sysName=SW-A144-2-Aruba",
+                "targetBlank": true
+              }
+            ],
+            "dataAttributes": {
+              "building": "AA",
+              "vlan": "302",
+              "subnet": "10.30.2.0/24"
+            }
+          },
+          {
+            "type": "text",
+            "x": 50,
+            "y": 170,
+            "text": "SU (Student Union)\nVLAN 303 – 10.30.3.0/24\nSwitches: SWA-SU121",
+            "fontSize": 14,
+            "color": "#8be9fd",
+            "links": [
+              {
+                "title": "SWA-SU121",
+                "url": "d/switching-backbone?var-sysName=SWA-SU121",
+                "targetBlank": true
+              }
+            ],
+            "dataAttributes": {
+              "building": "SU",
+              "vlan": "303",
+              "subnet": "10.30.3.0/24"
+            }
+          },
+          {
+            "type": "text",
+            "x": 50,
+            "y": 230,
+            "text": "SA (S Building / SA208)\nVLAN 303 – 10.30.3.0/24\nSwitches: (none in telegraf – monitoring blind spot)",
+            "fontSize": 14,
+            "color": "#8be9fd",
+            "links": [],
+            "dataAttributes": {
+              "building": "SA",
+              "vlan": "303",
+              "subnet": "10.30.3.0/24",
+              "monitoring": "none"
+            }
+          },
+          {
+            "type": "text",
+            "x": 350,
+            "y": 50,
+            "text": "H (Humanities / H128)\nVLAN 304 – 10.30.4.0/24\nSwitches: (none in telegraf – monitoring blind spot)",
+            "fontSize": 14,
+            "color": "#ffb86c",
+            "links": [],
+            "dataAttributes": {
+              "building": "H",
+              "vlan": "304",
+              "subnet": "10.30.4.0/24",
+              "monitoring": "none"
+            }
+          },
+          {
+            "type": "text",
+            "x": 350,
+            "y": 110,
+            "text": "COS (Cosmetology / COS109)\nVLAN 305 – 10.30.5.0/24\nSwitches: SW-COS109-Aruba",
+            "fontSize": 14,
+            "color": "#bd93f9",
+            "links": [
+              {
+                "title": "SW-COS109-Aruba",
+                "url": "d/switching-backbone?var-sysName=SW-COS109-Aruba",
+                "targetBlank": true
+              }
+            ],
+            "dataAttributes": {
+              "building": "COS",
+              "vlan": "305",
+              "subnet": "10.30.5.0/24"
+            }
+          },
+          {
+            "type": "text",
+            "x": 350,
+            "y": 170,
+            "text": "VoAg (V201 & GH2)\nVLAN 306 – 10.30.6.0/24\nSwitches: (none in telegraf – monitoring blind spot)",
+            "fontSize": 14,
+            "color": "#ff79c6",
+            "links": [],
+            "dataAttributes": {
+              "building": "VoAg",
+              "vlan": "306",
+              "subnet": "10.30.6.0/24",
+              "monitoring": "none"
+            }
+          },
+          {
+            "type": "text",
+            "x": 650,
+            "y": 50,
+            "text": "SLC (Student Living Center / SLC151)\nVLAN 307 – 10.30.7.0/24\nSwitches: SWA-SLC151",
+            "fontSize": 14,
+            "color": "#f1fa8c",
+            "links": [
+              {
+                "title": "SWA-SLC151",
+                "url": "d/switching-backbone?var-sysName=SWA-SLC151",
+                "targetBlank": true
+              }
+            ],
+            "dataAttributes": {
+              "building": "SLC",
+              "vlan": "307",
+              "subnet": "10.30.7.0/24"
+            }
+          },
+          {
+            "type": "text",
+            "x": 650,
+            "y": 110,
+            "text": "SLC North (SLCCDE – Dorms)\nVLAN 308 – 10.30.8.0/24\nSwitches: SWA-SLG, SWA-SLJ, SWA-SLR, SWA-SLS, SWA-SLT",
+            "fontSize": 14,
+            "color": "#f1fa8c",
+            "links": [
+              {
+                "title": "SWA-SLG",
+                "url": "d/switching-backbone?var-sysName=SWA-SLG",
+                "targetBlank": true
+              },
+              {
+                "title": "SWA-SLJ",
+                "url": "d/switching-backbone?var-sysName=SWA-SLJ",
+                "targetBlank": true
+              },
+              {
+                "title": "SWA-SLR",
+                "url": "d/switching-backbone?var-sysName=SWA-SLR",
+                "targetBlank": true
+              },
+              {
+                "title": "SWA-SLS",
+                "url": "d/switching-backbone?var-sysName=SWA-SLS",
+                "targetBlank": true
+              },
+              {
+                "title": "SWA-SLT",
+                "url": "d/switching-backbone?var-sysName=SWA-SLT",
+                "targetBlank": true
+              }
+            ],
+            "dataAttributes": {
+              "building": "SLC-NORTH",
+              "vlan": "308",
+              "subnet": "10.30.8.0/24"
+            }
+          },
+          {
+            "type": "text",
+            "x": 650,
+            "y": 170,
+            "text": "SLC South (SLCAB – Dorms)\nVLAN 309 – 10.30.9.0/24\nSwitches: SWA-SLG, SWA-SLJ, SWA-SLR, SWA-SLS, SWA-SLT",
+            "fontSize": 14,
+            "color": "#f1fa8c",
+            "links": [
+              {
+                "title": "SWA-SLG",
+                "url": "d/switching-backbone?var-sysName=SWA-SLG",
+                "targetBlank": true
+              },
+              {
+                "title": "SWA-SLJ",
+                "url": "d/switching-backbone?var-sysName=SWA-SLJ",
+                "targetBlank": true
+              },
+              {
+                "title": "SWA-SLR",
+                "url": "d/switching-backbone?var-sysName=SWA-SLR",
+                "targetBlank": true
+              },
+              {
+                "title": "SWA-SLS",
+                "url": "d/switching-backbone?var-sysName=SWA-SLS",
+                "targetBlank": true
+              },
+              {
+                "title": "SWA-SLT",
+                "url": "d/switching-backbone?var-sysName=SWA-SLT",
+                "targetBlank": true
+              }
+            ],
+            "dataAttributes": {
+              "building": "SLC-SOUTH",
+              "vlan": "309",
+              "subnet": "10.30.9.0/24"
+            }
+          },
+          {
+            "type": "text",
+            "x": 50,
+            "y": 290,
+            "text": "B101 (Boiler Room)\nVLAN 310 – 10.30.10.0/24\nSwitches: SW-B101-Aruba",
+            "fontSize": 14,
+            "color": "#ff5555",
+            "links": [
+              {
+                "title": "SW-B101-Aruba",
+                "url": "d/switching-backbone?var-sysName=SW-B101-Aruba",
+                "targetBlank": true
+              }
+            ],
+            "dataAttributes": {
+              "building": "B101",
+              "vlan": "310",
+              "subnet": "10.30.10.0/24"
+            }
+          },
+          {
+            "type": "text",
+            "x": 350,
+            "y": 290,
+            "text": "M201 (Maintenance)\nVLAN 311 – 10.30.11.0/24\nSwitches: SW-M201-1",
+            "fontSize": 14,
+            "color": "#ff5555",
+            "links": [
+              {
+                "title": "SW-M201-1",
+                "url": "d/switching-backbone?var-sysName=SW-M201-1",
+                "targetBlank": true
+              }
+            ],
+            "dataAttributes": {
+              "building": "M201",
+              "vlan": "311",
+              "subnet": "10.30.11.0/24"
+            }
+          },
+          {
+            "type": "text",
+            "x": 650,
+            "y": 290,
+            "text": "Epworth\nVLAN 313 – 10.30.13.0/24\nSwitches: (none in telegraf – monitoring blind spot)",
+            "fontSize": 14,
+            "color": "#ffb86c",
+            "links": [],
+            "dataAttributes": {
+              "building": "Epworth",
+              "vlan": "313",
+              "subnet": "10.30.13.0/24",
+              "monitoring": "none"
+            }
+          },
+          {
+            "type": "text",
+            "x": 50,
+            "y": 350,
+            "text": "T / TA / TB / TD / TT (Tech Complex)\nVLANs 316–320 – 10.30.16.0/24 → 10.30.20.0/24\nSwitches: (none in telegraf – monitoring blind spot)",
+            "fontSize": 14,
+            "color": "#6272a4",
+            "links": [],
+            "dataAttributes": {
+              "building": "TECH-COMPLEX",
+              "vlans": "316,317,318,319,320",
+              "subnets": "10.30.16.0/24–10.30.20.0/24",
+              "monitoring": "none"
+            }
+          },
+          {
+            "type": "text",
+            "x": 350,
+            "y": 350,
+            "text": "Tech Dorms (Hale Court – SLCFGHJRST)\nVLAN 321 – 10.30.21.0/24\nSwitches: (none in telegraf – monitoring blind spot)",
+            "fontSize": 14,
+            "color": "#6272a4",
+            "links": [],
+            "dataAttributes": {
+              "building": "TECH-DORMS",
+              "vlan": "321",
+              "subnet": "10.30.21.0/24",
+              "monitoring": "none"
+            }
+          },
+          {
+            "type": "text",
+            "x": 650,
+            "y": 350,
+            "text": "CAH (Colvin Allied Health)\nVLAN 322 – 10.30.22.0/24\nSwitches: (none in telegraf – monitoring blind spot)",
+            "fontSize": 14,
+            "color": "#ff79c6",
+            "links": [],
+            "dataAttributes": {
+              "building": "CAH",
+              "vlan": "322",
+              "subnet": "10.30.22.0/24",
+              "monitoring": "none"
+            }
+          }
+        ]
+      },
+      "links": [
+        {
+          "title": "Open Switching/Backbone Overview",
+          "url": "d/switching-backbone",
+          "targetBlank": true
+        }
+      ]
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  }
+}

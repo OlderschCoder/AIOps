@@ -1,0 +1,24 @@
+notifiers:
+  # SMS via webhook (Twilio, or email-to-SMS gateway)
+  # For email-to-SMS: Use SMTP with recipient like "5551234567@vtext.com" (Verizon) or "5551234567@txt.att.net" (AT&T)
+  - name: sms-oncall
+    type: webhook
+    uid: sms-oncall-webhook
+    org_id: 1
+    is_default: false
+    settings:
+      # Option 1: Direct SMS service (e.g., Twilio)
+      # url: "https://api.twilio.com/2010-04-01/Accounts/YOUR_ACCOUNT_SID/Messages.json"
+      # httpMethod: POST
+      # username: "YOUR_ACCOUNT_SID"
+      # password: "YOUR_AUTH_TOKEN"
+      # 
+      # Option 2: Email-to-SMS gateway (modify SMTP settings below instead)
+      # For AT&T: number@txt.att.net
+      # For Verizon: number@vtext.com
+      # For T-Mobile: number@tmomail.net
+      # For Sprint: number@messaging.sprintpcs.com
+      url: "YOUR_SMS_WEBHOOK_URL_OR_SMTP_RELAY"
+      httpMethod: POST
+      title: "Device Down Alert"
+      message: "🚨 Device Down: {{ range .Alerts }}{{ .Labels.sysName }} ({{ .Labels.source }}) - {{ .Annotations.description }}{{ end }}"

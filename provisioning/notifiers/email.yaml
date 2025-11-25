@@ -1,0 +1,20 @@
+notifiers:
+  # Office 365 Email for all alerts
+  - name: email-it-ops
+    type: email
+    uid: email-it-ops
+    org_id: 1
+    is_default: false
+    settings:
+      addresses: "it-ops@sccc.edu"  # Change to your IT ops distribution list
+      # SMTP settings for Office 365
+      smtp:
+        host: "smtp.office365.com:587"
+        user: "alerts@sccc.edu"  # Service account for sending alerts
+        password: "YOUR_SMTP_PASSWORD"  # Store securely, consider using environment variable
+        fromAddress: "alerts@sccc.edu"
+        fromName: "SCCC Network Monitoring"
+        skipVerify: false
+        startTLS: true
+      subject: "Network Alert: {{ .GroupLabels.alertname }}"
+      singleEmail: true  # Group multiple alerts in one email

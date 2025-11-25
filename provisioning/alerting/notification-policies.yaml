@@ -1,0 +1,85 @@
+# Notification Policies for Network Device Alerts
+# This file defines routing rules for alerts
+
+default_contact_point: email-it-ops
+
+# Root policy - routes all alerts
+routes:
+  # Critical alerts (device down) -> Teams + SMS + Email
+  - receiver: critical-alerts
+    matchers:
+      - severity=~critical
+    group_by:
+      - alertname
+      - sysName
+      - source
+    group_wait: 10s
+    group_interval: 1m
+    repeat_interval: 4h  # Repeat every 4 hours if still active
+    mute_time_intervals:
+      - maintenance-window  # Optional: suppress during maintenance windows
+    continue: false  # Don't continue to other routes
+
+  # Warning alerts -> Email only
+  - receiver: warning-alerts
+    matchers:
+      - severity=~warning
+    group_by:
+      - alertname
+      - sysName
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 24h
+    continue: false
+
+  # Default: Email only
+  - receiver: email-it-ops
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 24h
+
+# Contact point receivers
+receivers:
+  # Critical alerts: Teams + SMS + Email
+  - name: critical-alerts
+    grafana_managed_receiver_configs:
+      - uid: teams-it-ops-webhook
+        type: teams
+        name: Teams IT-Ops
+        settings:
+          url: "https://outlook.office.com/webhook/YOUR-TEAMS-WEBHOOK-URL-HERE"
+          title: "🚨 Critical: {{ .GroupLabels.alertname }}"
+          sectiontitle: "Alert Details"
+      - uid: sms-oncall-webhook
+        type: webhook
+        name: SMS On-Call
+        settings:
+          url: "YOUR_SMS_WEBHOOK_URL"
+          httpMethod: POST
+          title: "Device Down: {{ .GroupLabels.sysName }}"
+          message: "🚨 Device Down: {{ .GroupLabels.sysName }} ({{ .GroupLabels.source }})"
+      - uid: email-it-ops
+        type: email
+        name: Email IT-Ops
+        settings:
+          addresses: "it-ops@sccc.edu"
+
+  # Warning alerts: Email only
+  - name: warning-alerts
+    grafana_managed_receiver_configs:
+      - uid: email-it-ops
+        type: email
+        name: Email IT-Ops
+        settings:
+          addresses: "it-ops@sccc.edu"
+
+# Time intervals for maintenance windows (optional)
+time_intervals:
+  - name: maintenance-window
+    time_intervals:
+      - times:
+          - start_time: "02:00"
+            end_time: "04:00"
+        days_of_month: ["1", "15"]  # 1st and 15th of each month
+        months: ["*"]
+        years: ["*"]

@@ -1,0 +1,66 @@
+graph TB
+    subgraph Core["Core Layer (Hobble AA144)"]
+        N1[sw-aa144-A48<br/>192.168.2.70]
+        N2[sw-aa144-A24<br/>192.168.2.71]
+    end
+
+    subgraph Security["Security"]
+        FG[FortiGate1-sccc<br/>192.168.1.1]
+    end
+
+    subgraph Distribution["Building Distribution Layer"]
+        %% Humanities
+        H1[SW-H128-TEST]
+        H2[SW-H128-PRIM]
+
+        %% CAH
+        CAH[SW-CAH144]
+
+        %% Boiler Room
+        B1[SW-B101-Aruba<br/>192.168.2.196]
+
+        %% Student Living
+        SLC[SWA-SLC151<br/>192.168.2.175]
+        
+        %% Cosmo
+        COS[SW-COS109-Aruba<br/>192.168.2.171]
+
+        %% Administration
+        ADM[SWA-AA105<br/>192.168.2.199]
+
+        %% Student Union
+        SU[SWA-SU121<br/>192.168.2.200]
+
+        %% Maintenance
+        MNT[SW-M201-1<br/>192.168.2.205]
+    end
+
+    subgraph "Student Living Distribution"
+        SLG[SWA-SLG<br/>192.168.2.179]
+        SLJ[SWA-SLJ<br/>192.168.2.181]
+        SLR[SWA-SLR<br/>192.168.2.182]
+        SLS[SWA-SLS<br/>192.168.2.183]
+        SLT[SWA-SLT<br/>192.168.2.184]
+    end
+
+    %% Core Connections
+    N1 --- N2
+    FG --- N1
+    FG --- N2
+
+    %% Building Distribution Connections
+    N1 --- H1 & H2
+    N1 --- CAH
+    N1 --- B1
+    N1 --- SLC
+    N1 --- COS
+    N1 --- ADM
+    N1 --- SU
+    N1 --- MNT
+
+    %% Student Living Connections
+    SLC --- SLG & SLJ & SLR & SLS & SLT
+
+    %% VLAN Labels
+    classDef vlan fill:#f9f,stroke:#333,stroke-width:2px
+    class FG,N1,N2 vlan

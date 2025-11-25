@@ -1,0 +1,240 @@
+{
+  "__inputs": [
+    { "name": "DS_INFLUXDB", "label": "InfluxDB", "type": "datasource", "pluginId": "influxdb", "pluginName": "InfluxDB" }
+  ],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.x" },
+    { "type": "datasource", "id": "influxdb", "name": "InfluxDB", "version": "2.x" },
+    { "type": "panel", "id": "stat", "name": "Stat", "version": "8.0" },
+    { "type": "panel", "id": "timeseries", "name": "Time series", "version": "8.0" },
+    { "type": "panel", "id": "table", "name": "Table", "version": "8.0" }
+  ],
+  "title": "SCCC Network Overview (LCARS)",
+  "timezone": "browser",
+  "schemaVersion": 37,
+  "style": "dark",
+  "tags": ["LCARS", "Overview", "FortiGate", "Switching"],
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "device",
+        "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+        "query": "import \"influxdata/influxdb/v1\"\nv1.tagValues(bucket: \"telegraf\", tag: \"sysName\")",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "sort": 1
+      }
+    ]
+  },
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "ISP 95th Percentile (bps)",
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "bps" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\")\n  |> filter(fn: (r) => r.ifDescr =~ /(?i)wan|internet|uplink/)\n  |> filter(fn: (r) => r._field == \"ifInOctets\" or r._field == \"ifOutOctets\" or r._field == \"ifHCInOctets\" or r._field == \"ifHCOutOctets\")\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: r._value * 8.0 }))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group(columns: [\"sysName\", \"ifDescr\"])\n  |> quantile(column: \"_value\", q: 0.95, method: \"estimate_tdigest\")\n  |> group()\n  |> sum(column: \"_value\")\n  |> last()"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Internet Latency (ms)",
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "ms" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\")\n  |> filter(fn: (r) => r._field == \"average_response_ms\" or r._field == \"rtt_avg\")\n  |> map(fn: (r) => ({ r with _value: if r._field == \"rtt_avg\" then (r._value / 1000000.0) else r._value }))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group()\n  |> mean(column: \"_value\")\n  |> last()"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Campus Backbone Load (bps)",
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "bps" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\")\n  |> filter(fn: (r) => r._field == \"ifInOctets\" or r._field == \"ifOutOctets\" or r._field == \"ifHCInOctets\" or r._field == \"ifHCOutOctets\")\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: r._value * 8.0 }))\n  |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)\n  |> group(columns: [\"_time\"])\n  |> sum(column: \"_value\")\n  |> group()\n  |> last()"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "FGT WAN Upload (bps)",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "bps" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\")\n  |> filter(fn: (r) => r.sysName == \"Fortigate1-Sccc\")\n  |> filter(fn: (r) => r._field == \"ifOutOctets\" or r._field == \"ifHCOutOctets\")\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: r._value * 8.0 }))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> last()"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "FGT WAN Download (bps)",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "bps" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\")\n  |> filter(fn: (r) => r.sysName == \"Fortigate1-Sccc\")\n  |> filter(fn: (r) => r._field == \"ifInOctets\" or r._field == \"ifHCInOctets\")\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: r._value * 8.0 }))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> last()"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "FGT Sessions (placeholder)",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"snmp\" and r._field == \"fgSysSesCount\")\n  |> group(columns: [\"sysName\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> last()"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "FortiGate WAN Throughput (bps)",
+      "gridPos": { "h": 9, "w": 12, "x": 18, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "bps" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\")\n  |> filter(fn: (r) => r.sysName == \"Fortigate1-Sccc\")\n  |> filter(fn: (r) => r._field == \"ifInOctets\" or r._field == \"ifOutOctets\" or r._field == \"ifHCInOctets\" or r._field == \"ifHCOutOctets\")\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: r._value * 8.0, dir: if r._field == \"ifInOctets\" or r._field == \"ifHCInOctets\" then \"download\" else \"upload\" }))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"wan_bps\")"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Aggregate Campus Throughput (bps)",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 15 },
+      "fieldConfig": { "defaults": { "unit": "bps" } },
+      "options": { "legend": { "displayMode": "table" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\")\n  |> filter(fn: (r) => r._field == \"ifInOctets\" or r._field == \"ifOutOctets\" or r._field == \"ifHCInOctets\" or r._field == \"ifHCOutOctets\")\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: r._value * 8.0 }))\n  |> aggregateWindow(every: v.windowPeriod, fn: sum, createEmpty: false)\n  |> keep(columns: [\"_start\", \"_stop\", \"_time\", \"_value\"])\n  |> group(columns: [\"_start\", \"_stop\"])\n  |> sum(column: \"_value\")\n  |> map(fn: (r) => ({ r with _time: r._stop }))\n  |> keep(columns: [\"_time\", \"_value\"])\n  |> yield(name: \"aggregateCampusBps\")"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Top 10 Interfaces by 95th Percentile (bps)",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 24 },
+      "options": { "showHeader": true },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\")\n  |> filter(fn: (r) => r._field =~ /^(ifInOctets|ifOutOctets|ifHCInOctets|ifHCOutOctets)$/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: r._value * 8.0 }))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> pivot(rowKey: [\"_time\", \"sysName\", \"ifDescr\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({ r with bps: max(x: if exists r.ifHCInOctets then r.ifHCInOctets else (if exists r.ifInOctets then r.ifInOctets else 0.0), y: if exists r.ifHCOutOctets then r.ifHCOutOctets else (if exists r.ifOutOctets then r.ifOutOctets else 0.0)) }))\n  |> group(columns: [\"sysName\", \"ifDescr\"])\n  |> quantile(column: \"bps\", q: 0.95, method: \"estimate_tdigest\")\n  |> keep(columns: [\"sysName\", \"ifDescr\", \"bps\"])\n  |> rename(columns: { bps: \"_value\" })\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 10)"
+        }
+      ]
+    }
+    ,
+    {
+      "type": "timeseries",
+      "title": "Internet Latency (ms) - Timeseries",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 33 },
+      "fieldConfig": { "defaults": { "unit": "ms" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\")\n  |> filter(fn: (r) => r._field == \"average_response_ms\" or r._field == \"rtt_avg\")\n  |> map(fn: (r) => ({ r with _value: if r._field == \"rtt_avg\" then (r._value / 1000000.0) else r._value }))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> keep(columns: [\"_time\", \"_value\", \"url\"])\n  |> yield(name: \"latency_ms\")"
+        }
+      ]
+    }
+    ,
+    {
+      "type": "stat",
+      "title": "Internet Packet Loss (%)",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 33 },
+      "fieldConfig": { "defaults": { "unit": "percent" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\")\n  |> filter(fn: (r) => r._field == \"percent_packet_loss\" or r._field == \"packets_transmitted\" or r._field == \"packets_received\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> pivot(rowKey: [\"_time\", \"url\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({ r with _value: if exists r.percent_packet_loss then r.percent_packet_loss else (if exists r.packets_transmitted and r.packets_transmitted > 0.0 then (1.0 - (r.packets_received / r.packets_transmitted)) * 100.0 else 0.0) }))\n  |> group()\n  |> mean(column: \"_value\")\n  |> last()"
+        }
+      ]
+    }
+    ,
+    {
+      "type": "stat",
+      "title": "SNMP Devices Reporting",
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 33 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"snmp\")\n  |> filter(fn: (r) => r._field == \"sysUpTime\")\n  |> group(columns: [\"sysName\"])\n  |> last()\n  |> group()\n  |> count()"
+        }
+      ]
+    }
+    ,
+    {
+      "type": "table",
+      "title": "SNMP Device Uptime",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 38 },
+      "options": { "showHeader": true },
+      "fieldConfig": { "defaults": { "unit": "s" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"snmp\" and r._field == \"sysUpTime\")\n  |> group(columns: [\"source\"])\n  |> last()\n  |> map(fn: (r) => ({ r with uptime_seconds: float(v: r._value) / 100.0, uptime_days: (float(v: r._value) / 100.0) / 86400.0 }))\n  |> keep(columns: [\"source\", \"sysName\", \"uptime_seconds\", \"uptime_days\"])\n  |> sort(columns: [\"sysName\", \"source\"], desc: false)"
+        }
+      ]
+    }
+    ,
+    {
+      "type": "table",
+      "title": "FortiGate Intrusions / Denies",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 46 },
+      "options": { "showHeader": true },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"syslog\")\n  |> filter(fn: (r) => r._field == \"message\")\n  |> map(fn: (r) => ({ r with action: if exists r._value and r._value =~ /action=deny|action=blocked/ then \"deny\" else \"other\" }))\n  |> map(fn: (r) => ({ r with subtype: if exists r._value and r._value =~ /subtype=ips|eventtype=ips/ then \"ips\" else \"other\" }))\n  |> filter(fn: (r) => r.action == \"deny\" or r.subtype == \"ips\")\n  |> aggregateWindow(every: v.windowPeriod, fn: count, createEmpty: false)\n  |> group(columns: [\"action\", \"subtype\"])\n  |> sum(column: \"_value\")"
+        }
+      ]
+    }
+  ]
+}
+
+
+

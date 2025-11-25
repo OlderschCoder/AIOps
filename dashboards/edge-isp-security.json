@@ -1,0 +1,107 @@
+{
+  "__inputs": [
+    { "name": "DS_INFLUXDB", "label": "InfluxDB", "type": "datasource", "pluginId": "influxdb", "pluginName": "InfluxDB" }
+  ],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.x" },
+    { "type": "datasource", "id": "influxdb", "name": "InfluxDB", "version": "2.x" },
+    { "type": "panel", "id": "timeseries", "name": "Time series", "version": "8.0" },
+    { "type": "panel", "id": "table", "name": "Table", "version": "8.0" },
+    { "type": "panel", "id": "geomap", "name": "Geomap", "version": "10.0" }
+  ],
+  "title": "SCCC Edge / ISP & Security (LCARS)",
+  "timezone": "browser",
+  "schemaVersion": 37,
+  "style": "dark",
+  "tags": ["LCARS", "Edge", "Security"],
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "wan_if",
+        "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+        "query": "import \"influxdata/influxdb/v1\"\n// Interfaces containing 'wan' or 'internet' in description\nfrom(bucket: \"telegraf\")\n  |> range(start: -7d)\n  |> filter(fn: (r) => r._measurement == \"interface\" and (r._field == \"ifDescr\"))",
+        "hide": 2,
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true
+      }
+    ]
+  },
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "ISP/WAN Bandwidth (bps)",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "bps" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\")\n  |> filter(fn: (r) => r.ifDescr =~ /wan|internet|uplink/i)\n  |> filter(fn: (r) => r._field == \"ifInOctets\" or r._field == \"ifOutOctets\")\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: r._value * 8.0, dir: if r._field == \"ifInOctets\" then \"in\" else \"out\" }))\n  |> aggregateWindow(every: v.interval, fn: mean, createEmpty: false)\n  |> yield(name: \"wan_bps\")"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency to Internet (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "ms" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"ping\")\n  |> filter(fn: (r) => r._field == \"rtt_avg\")\n  |> map(fn: (r) => ({ r with _value: r._value / 1000000.0 }))\n  |> aggregateWindow(every: v.interval, fn: mean, createEmpty: false)\n  |> yield(name: \"latency_ms\")"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Firewall Sessions (placeholder)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "// Requires FortiGate fgSysSesCount via SNMP input\nfrom(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"snmp\")\n  |> filter(fn: (r) => r._field == \"fgSysSesCount\")\n  |> aggregateWindow(every: v.interval, fn: mean, createEmpty: false)"
+        }
+      ],
+      "description": "Add FortiGate OID 1.3.6.1.4.1.12356.101.4.1.2.0 to telegraf to populate."
+    },
+    {
+      "type": "table",
+      "title": "Top Talkers (placeholder - requires NetFlow)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 17 },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "// Example if NetFlow exported to measurement 'netflow' with fields bytes\nfrom(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"netflow\")\n  |> filter(fn: (r) => r._field == \"bytes\")\n  |> aggregateWindow(every: v.interval, fn: sum, createEmpty: false)\n  |> group(columns: [\"src_ip\", \"dst_ip\"])\n  |> sum(column: \"_value\")\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 20)"
+        }
+      ],
+      "description": "Enable Telegraf NetFlow input and GeoIP to populate this table and map."
+    },
+    {
+      "type": "geomap",
+      "title": "External Traffic by Country (placeholder)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 27 },
+      "options": { "view": { "id": "usa" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "// Requires netflow with geolocation (country)\nfrom(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"netflow\")\n  |> filter(fn: (r) => r._field == \"bytes\")\n  |> group(columns: [\"country\"])\n  |> sum(column: \"_value\")\n  |> rename(columns: {country: \"location\"})"
+        }
+      ]
+    }
+  ]
+}
+
+

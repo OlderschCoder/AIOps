@@ -1,0 +1,238 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green" }, { "color": "red", "value": 80 } ] },
+          "unit": "bps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": [ "lastNotNull" ], "fields": "", "values": false },
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "targets": [
+        {
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface_legacy\" and (r._field == \"ifInOctets\" or r._field == \"ifOutOctets\"))\n  |> keep(columns: [\"_time\",\"_value\",\"_field\",\"sysName\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: float(v: r._value) * 8.0 }))\n  |> group(columns: [\"_time\"])\n  |> sum(column: \"_value\")\n  |> keep(columns: [\"_time\",\"_value\"])",
+          "queryType": "flux",
+          "refId": "A"
+        }
+      ],
+      "title": "Campus Backbone Load (bps)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "mappings": [],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "green" }, { "color": "red", "value": 80 } ] },
+          "unit": "bps"
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 9, "w": 8, "x": 6, "y": 0 },
+      "id": 2,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false }, "tooltip": { "mode": "single", "sort": "none" } },
+      "targets": [
+        {
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\")\n  |> filter(fn: (r) => r.sysName == \"Fortigate1-Sccc\")\n  |> filter(fn: (r) => r._field == \"ifInOctets\" or r._field == \"ifOutOctets\" or r._field == \"ifHCInOctets\" or r._field == \"ifHCOutOctets\")\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: r._value * 8.0, dir: if r._field == \"ifInOctets\" or r._field == \"ifHCInOctets\" then \"download\" else \"upload\" }))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+          "queryType": "flux",
+          "refId": "A"
+        }
+      ],
+      "title": "FortiGate WAN Throughput (bps)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+      "fieldConfig": { "defaults": { "mappings": [], "thresholds": { "mode": "absolute", "steps": [ { "color": "green" }, { "color": "red", "value": 80 } ] }, "unit": "bps" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 5, "x": 14, "y": 0 },
+      "id": 3,
+      "options": { "minVizHeight": 75, "minVizWidth": 75, "orientation": "auto", "reduceOptions": { "calcs": [ "lastNotNull" ], "fields": "", "values": false }, "showThresholdLabels": false, "showThresholdMarkers": true },
+      "targets": [
+        {
+          "query": "wanNames = [\"wan1\",\"wan2\"]\n\ninRates =\n  from(bucket: \"telegraf\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"interface\" and r._field == \"ifHCInOctets\")\n    |> filter(fn: (r) => contains(value: r.ifName, set: wanNames))\n    |> keep(columns: [\"_time\",\"_value\",\"ifName\"])\n    |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n    |> derivative(unit: 1s, nonNegative: true)\n    |> map(fn: (r) => ({ r with _value: float(v: r._value) * 8.0 }))\n\noutRates =\n  from(bucket: \"telegraf\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"interface\" and r._field == \"ifHCOutOctets\")\n    |> filter(fn: (r) => contains(value: r.ifName, set: wanNames))\n    |> keep(columns: [\"_time\",\"_value\",\"ifName\"])\n    |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n    |> derivative(unit: 1s, nonNegative: true)\n    |> map(fn: (r) => ({ r with _value: float(v: r._value) * 8.0 }))\n\nunion(tables: [inRates, outRates])\n  |> group(columns: [\"_time\"])\n  |> sum(column: \"_value\")\n  |> quantile(column: \"_value\", q: 0.95, method: \"estimate_tdigest\")\n  |> keep(columns: [\"_value\"])",
+          "queryType": "flux",
+          "refId": "A"
+        }
+      ],
+      "title": "ISP 95th Percentile (bps)",
+      "type": "gauge"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 9, "x": 19, "y": 0 },
+      "id": 4,
+      "options": { "displayMode": "lcd", "minVizHeight": 10, "minVizWidth": 0, "namePlacement": "auto", "orientation": "horizontal", "reduceOptions": { "calcs": [ "lastNotNull" ], "fields": "", "values": false }, "showUnfilled": true, "valueMode": "color" },
+      "targets": [
+        {
+          "query": "import \"math\"\n\nfrom(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"fortigate_healthcheck_v2\")\n  |> filter(fn: (r) => r._field == \"packet_loss_pct\" or r._field == \"latency_ms\")\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group(columns: [\"hc_name\",\"ifName\",\"_field\"])\n  |> last()\n  |> rename(columns: {hc_name:\"HealthCheck\", ifName:\"Interface\"})\n  |> map(fn: (r) => ({ r with _value: if r._field == \"packet_loss_pct\" then math.round(x: r._value * 100.0) / 100.0 else math.round(x: r._value) }))\n  |> pivot(rowKey: [\"HealthCheck\",\"Interface\",\"_time\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> rename(columns: {packet_loss_pct:\"Packet Loss %\", latency_ms:\"Latency (ms)\"})\n  |> keep(columns: [\"_time\",\"HealthCheck\",\"Interface\",\"Packet Loss %\",\"Latency (ms)\"])",
+          "queryType": "flux",
+          "refId": "A"
+        }
+      ],
+      "title": "Internet Latency / Loss",
+      "type": "bargauge"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+      "fieldConfig": { "defaults": { "unit": "bps" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 6 },
+      "id": 5,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false } },
+      "targets": [
+        {
+          "query": "inb =\n  from(bucket: \"telegraf\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"interface_legacy\" and r._field == \"ifInOctets\")\n    |> keep(columns: [\"_time\",\"_value\",\"sysName\",\"ifDescr\"])\n    |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n    |> derivative(unit: 1s, nonNegative: true)\n    |> map(fn: (r) => ({ r with bps: float(v: r._value) * 8.0 }))\n\noutb =\n  from(bucket: \"telegraf\")\n    |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n    |> filter(fn: (r) => r._measurement == \"interface_legacy\" and r._field == \"ifOutOctets\")\n    |> keep(columns: [\"_time\",\"_value\",\"sysName\",\"ifDescr\"])\n    |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n    |> derivative(unit: 1s, nonNegative: true)\n    |> map(fn: (r) => ({ r with bps: float(v: r._value) * 8.0 }))\n\nunion(tables: [inb, outb])\n  |> keep(columns: [\"_time\",\"bps\",\"sysName\",\"ifDescr\"])\n  |> group(columns: [\"_time\",\"sysName\",\"ifDescr\"])\n  |> sum(column: \"bps\")\n  |> group(columns: [\"sysName\",\"ifDescr\"])\n  |> quantile(column: \"bps\", q: 0.95, method: \"estimate_tdigest\")\n  |> sort(columns: [\"bps\"], desc: true)\n  |> limit(n: 10)",
+          "queryType": "flux",
+          "refId": "A"
+        }
+      ],
+      "title": "Top 10 Interfaces by 95th Percentile (bps)",
+      "type": "bargauge"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+      "fieldConfig": { "defaults": { "unit": "s" }, "overrides": [] },
+      "gridPos": { "h": 7, "w": 10, "x": 8, "y": 6 },
+      "id": 6,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "showLegend": false } },
+      "targets": [
+        {
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"snmp\" and r._field == \"sysUpTime\")\n  |> group(columns: [\"source\"])\n  |> last()\n  |> map(fn: (r) => ({ r with uptime_seconds: float(v: r._value) / 100.0, uptime_days: (float(v: r._value) / 100.0) / 86400.0 }))\n  |> keep(columns: [\"source\", \"sysName\", \"uptime_seconds\", \"uptime_days\"])\n  |> sort(columns: [\"sysName\", \"source\"], desc: false)",
+          "queryType": "flux",
+          "refId": "A"
+        }
+      ],
+      "title": "SNMP Device Uptime",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 6 },
+      "id": 7,
+      "options": { "cellHeight": "sm", "showHeader": true },
+      "targets": [
+        {
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"syslog\")\n  |> filter(fn: (r) => r._field == \"message\")\n  |> map(fn: (r) => ({ r with action: if exists r._value and r._value =~ /action=deny|action=blocked/ then \"deny\" else \"other\" }))\n  |> map(fn: (r) => ({ r with subtype: if exists r._value and r._value =~ /subtype=ips|eventtype=ips/ then \"ips\" else \"other\" }))\n  |> filter(fn: (r) => r.action == \"deny\" or r.subtype == \"ips\")\n  |> aggregateWindow(every: v.windowPeriod, fn: count, createEmpty: false)\n  |> group(columns: [\"action\", \"subtype\"])\n  |> sum(column: \"_value\")",
+          "queryType": "flux",
+          "refId": "A"
+        }
+      ],
+      "title": "FortiGate Intrusions / Denies",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 13 },
+      "id": 8,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": [ "lastNotNull" ], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
+      "targets": [
+        {
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"snmp\")\n  |> filter(fn: (r) => r._field == \"fgSysSesCount\")\n  |> group(columns: [\"sysName\"])\n  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n  |> last()",
+          "queryType": "flux",
+          "refId": "A"
+        }
+      ],
+      "title": "FGT Sessions",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+      "fieldConfig": { "defaults": { "unit": "bps" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 13 },
+      "id": 9,
+      "options": { "colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": { "calcs": [ "lastNotNull" ], "fields": "", "values": false }, "textMode": "auto", "wideLayout": true },
+      "targets": [
+        {
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\")\n  |> filter(fn: (r) => r.sysName == \"Fortigate1-Sccc\")\n  |> filter(fn: (r) => r._field == \"ifOutOctets\" or r._field == \"ifHCOutOctets\")\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: r._value * 8.0 }))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> last()",
+          "queryType": "flux",
+          "refId": "A"
+        }
+      ],
+      "title": "FGT WAN Upload (bps)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+      "fieldConfig": { "defaults": { "unit": "bps" }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 13 },
+      "id": 10,
+      "options": { "minVizHeight": 75, "minVizWidth": 75, "orientation": "auto", "reduceOptions": { "calcs": [ "lastNotNull" ], "fields": "", "values": false }, "showThresholdLabels": false, "showThresholdMarkers": true },
+      "targets": [
+        {
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement =~ /^(interface|interface_legacy)$/)\n  |> filter(fn: (r) => r.sysName =~ /(?i)Fortigate1-Sccc/ or r.source == \"192.168.1.1\")\n  |> filter(fn: (r) => r._field == \"ifHCInOctets\" or r._field == \"ifInOctets\")\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: r._value * 8.0 }))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group(columns: [\"_time\"])\n  |> sum(column: \"_value\")",
+          "queryType": "flux",
+          "refId": "A"
+        }
+      ],
+      "title": "FGT WAN Download (bps)",
+      "type": "gauge"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": [ "LCARS", "Map", "Overview" ],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "SCCC Campus Map Overlay (LCARS)",
+  "uid": "sccc-campus-map-lcars",
+  "version": 1,
+  "weekStart": ""
+}

@@ -1,0 +1,102 @@
+version: "3.8"
+
+
+services:
+
+  influxdb:
+
+    image: influxdb:2.7
+
+    container_name: influxdb
+
+    ports:
+
+      - "8086:8086"
+
+    volumes:
+
+      - ./influxdb:/var/lib/influxdb2
+
+    environment:
+
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+
+      - DOCKER_INFLUXDB_INIT_PASSWORD=admin123
+
+      - DOCKER_INFLUXDB_INIT_ORG=SCCC
+
+      - DOCKER_INFLUXDB_INIT_BUCKET=telegraf
+
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=FJyv2E4WC_xNxF41zPvWCB4bYHEHD_lZ3R1sKv4Gfzc1HcPAMz-UQGkcMMD4-_mriZvDXNVAz-ERPcJfjBXXIA==
+
+    restart: unless-stopped
+
+
+  telegraf:
+
+    image: telegraf:1.30
+
+    container_name: telegraf
+
+    depends_on:
+
+      - influxdb
+
+    # SNMP/ping work best with host networking
+
+    network_mode: host
+
+    cap_add:
+
+      - NET_RAW
+
+      - NET_ADMIN
+
+    volumes:
+
+      # Your config
+
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+
+      # Optional: only if you keep named OIDs (IF-MIB::...). If not, remove both env+volume.
+
+      - ./mibs:/usr/share/snmp/mibs:ro
+
+    environment:
+
+      # Optional, only if you mounted MIBs
+
+      - MIBS=+ALL
+
+      - MIBDIRS=/usr/share/snmp/mibs
+
+    command: ["--config", "/etc/telegraf/telegraf.conf"]
+
+    restart: unless-stopped
+
+
+  grafana:
+
+    image: grafana/grafana:10.2.2
+
+    container_name: grafana
+
+    ports:
+
+      - "3000:3000"
+
+    volumes:
+
+      - ./grafana:/var/lib/grafana
+
+      - ./provisioning:/etc/grafana/provisioning
+
+    environment:
+
+      - GF_SECURITY_ADMIN_USER=admin
+
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+
+    restart: unless-stopped

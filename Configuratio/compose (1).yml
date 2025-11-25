@@ -1,0 +1,65 @@
+services:
+  influxdb:
+    image: influxdb:2.7
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - ./influxdb:/var/lib/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUX_USERNAME:-admin}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUX_PASSWORD:-admin123}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUX_ORG:-SCCC}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUX_BUCKET:-telegraf}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUX_TOKEN:-changeme-token}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "curl -fsS http://localhost:8086/health >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  telegraf:
+    image: telegraf:1.30
+    container_name: telegraf
+    depends_on:
+      - influxdb
+    network_mode: host
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ./mibs:/usr/share/snmp/mibs:ro
+    environment:
+      - MIBS=+ALL
+      - MIBDIRS=/usr/share/snmp/mibs
+    command: ["--config", "/etc/telegraf/telegraf.conf"]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin123}
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/
+      - GF_SERVER_DOMAIN=${GRAFANA_DOMAIN:-grafana.example.com}
+      - GF_SERVER_HTTP_ADDR=0.0.0.0
+      - GF_SERVER_HTTP_PORT=3000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget --spider -q http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  grafana:
+  influxdb:

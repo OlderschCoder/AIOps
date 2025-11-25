@@ -1,0 +1,124 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "-- Grafana --",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "type": "table",
+      "title": "Devices (IP)",
+      "gridPos": { "x": 0, "y": 0, "w": 24, "h": 9 },
+      "id": 1,
+      "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "// Devices list with health by down ports (admin up, oper down)\nstrings =\nfrom(bucket: \"telegraf\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"snmp\" and (r._field == \"sysLocation\" or r._field == \"sysDescr\"))\n  |> group(columns: [\"source\",\"sysName\",\"_field\"])\n  |> last()\n  |> group(columns: [\"source\",\"sysName\"])\n  |> pivot(rowKey: [\"sysName\",\"source\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> keep(columns: [\"sysName\",\"source\",\"sysLocation\",\"sysDescr\"])\n\nuptime =\nfrom(bucket: \"telegraf\")\n  |> range(start: -30d)\n  |> filter(fn: (r) => r._measurement == \"snmp\" and r._field == \"sysUpTime\")\n  |> group(columns: [\"source\",\"sysName\"])\n  |> last()\n  |> map(fn: (r) => ({ r with uptime_days: float(v: r._value) / 100.0 / 86400.0 }))\n  |> keep(columns: [\"sysName\",\"source\",\"uptime_days\"])\n\nnx =\nfrom(bucket: \"telegraf\")\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"if_status_errors\" and (r._field == \"ifAdminStatus\" or r._field == \"ifOperStatus\"))\n  |> group(columns: [\"source\",\"sysName\",\"ifName\"])\n  |> last()\n  |> pivot(rowKey: [\"source\",\"sysName\",\"ifName\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({ r with issue: if int(v: r.ifAdminStatus) == 1 and int(v: r.ifOperStatus) != 1 then 1.0 else 0.0 }))\n  |> keep(columns: [\"source\",\"sysName\",\"issue\"])\n\naruba =\nfrom(bucket: \"telegraf\")\n  |> range(start: -15m)\n  |> filter(fn: (r) => r._measurement == \"interface_legacy\" and (r._field == \"ifAdminStatus\" or r._field == \"ifOperStatus\"))\n  |> group(columns: [\"source\",\"sysName\",\"ifDescr\"])\n  |> last()\n  |> pivot(rowKey: [\"source\",\"sysName\",\"ifDescr\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({ r with issue: if int(v: r.ifAdminStatus) == 1 and int(v: r.ifOperStatus) != 1 then 1.0 else 0.0 }))\n  |> keep(columns: [\"source\",\"sysName\",\"issue\"])\n\nissues =\nunion(tables: [nx, aruba])\n  |> group(columns: [\"source\",\"sysName\"])\n  |> sum(column: \"issue\")\n  |> rename(columns: {issue: \"down_ports\"})\n\nbase = join(tables: {a: strings, b: uptime}, on: [\"sysName\",\"source\"], method: \"inner\")\n\nzeros = base |> keep(columns: [\"source\",\"sysName\"]) |> map(fn: (r) => ({ r with down_ports: 0.0 }))\n\ndown_all = union(tables: [zeros, issues]) |> group(columns: [\"source\",\"sysName\"]) |> max(column: \"down_ports\")\n\njoin(tables: {a: base, b: down_all}, on: [\"sysName\",\"source\"], method: \"inner\")\n  |> rename(columns: {sysName: \"name\", source: \"ip\", sysLocation: \"location\", sysDescr: \"description\"})\n  |> map(fn: (r) => ({ r with health_score: if r.down_ports > 0.0 then 1.0 else 0.0 }))\n  |> keep(columns: [\"ip\",\"description\",\"location\",\"name\",\"uptime_days\",\"down_ports\",\"health_score\"])\n  |> group()\n  |> sort(columns: [\"ip\"])"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "align": "auto" },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "health_score" },
+            "properties": [
+              { "id": "custom.cellOptions", "value": { "type": "color-background" } }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      }
+    },
+    {
+      "type": "barchart",
+      "title": "Broadcast PPS (Top 10)",
+      "gridPos": { "x": 0, "y": 9, "w": 12, "h": 9 },
+      "id": 2,
+      "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+      "options": { "orientation": "horizontal", "legend": { "showLegend": false } },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\" and (r._field == \"ifHCInBroadcastPkts\" or r._field == \"ifHCOutBroadcastPkts\"))\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group(columns: [\"_time\",\"sysName\",\"source\"])\n  |> sum(column: \"_value\")\n  |> group(columns: [\"sysName\",\"source\"])\n  |> last()\n  |> keep(columns: [\"sysName\",\"source\",\"_value\"])\n  |> rename(columns: {source: \"ip\", _value: \"broadcast_pps\"})\n  |> group()\n  |> sort(columns: [\"broadcast_pps\"], desc: true)\n  |> limit(n: 10)"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "pps" }, "overrides": [] }
+    },
+    {
+      "type": "barchart",
+      "title": "Interfaces – ${ip} (pps)",
+      "gridPos": { "x": 12, "y": 9, "w": 12, "h": 9 },
+      "id": 3,
+      "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+      "options": { "orientation": "horizontal", "legend": { "showLegend": false } },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "// iface vs pps for selected ip\nipFilter = \"${ip}\"\npassAll  = ipFilter == \"\" or ipFilter == \"*\"\n\nspeeds = from(bucket: \"telegraf\")\n  |> range(start: -15m)\n  |> filter(fn: (r) => (passAll or r.source == ipFilter) and r._measurement == \"interface\" and r._field == \"ifHighSpeed\")\n  |> group(columns: [\"source\",\"sysName\",\"ifName\"])\n  |> last()\n  |> map(fn: (r) => ({ r with iface: r.ifName, speed_mbps: float(v: r._value) }))\n  |> keep(columns: [\"source\",\"sysName\",\"iface\",\"speed_mbps\"])\n\nactivity = from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => (passAll or r.source == ipFilter) and r._measurement == \"interface\" and (r._field == \"ifHCInUcastPkts\" or r._field == \"ifHCOutUcastPkts\"))\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group(columns: [\"_time\",\"source\",\"sysName\",\"ifName\"])\n  |> sum(column: \"_value\")\n  |> group(columns: [\"source\",\"sysName\",\"ifName\"])\n  |> last()\n  |> map(fn: (r) => ({ r with iface: r.ifName, pps: float(v: r._value) }))\n  |> keep(columns: [\"source\",\"sysName\",\"iface\",\"pps\"])\n\npps_zero = speeds |> keep(columns: [\"source\",\"sysName\",\"iface\"]) |> map(fn: (r) => ({ r with pps: 0.0 }))\n\npps_all = union(tables: [pps_zero, activity]) |> group(columns: [\"source\",\"sysName\",\"iface\"]) |> max(column: \"pps\")\n\njoin(tables: {a: speeds, b: pps_all}, on: [\"source\",\"sysName\",\"iface\"], method: \"inner\")\n  |> keep(columns: [\"iface\",\"pps\"])\n  |> sort(columns: [\"pps\"], desc: true)\n  |> limit(n: 30)"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "pps" }, "overrides": [] }
+    }
+  ],
+  "schemaVersion": 37,
+  "style": "dark",
+  "tags": ["influx", "switch"],
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "ip",
+        "label": "IP",
+        "hide": 0,
+        "datasource": { "type": "influxdb", "uid": "a52e8ae9-7f83-4e83-bc5d-b97ed5f7e183" },
+        "query": "import \"influxdata/influxdb/v1\"\nv1.tagValues(bucket: \"telegraf\", tag: \"source\")",
+        "refresh": 2,
+        "includeAll": false,
+        "multi": false,
+        "sort": 1
+      }
+    ]
+  },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Switch – InfluxDB",
+  "uid": null,
+  "version": 1,
+  "weekStart": ""
+}
+

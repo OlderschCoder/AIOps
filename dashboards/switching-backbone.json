@@ -1,0 +1,85 @@
+{
+  "__inputs": [
+    { "name": "DS_INFLUXDB", "label": "InfluxDB", "type": "datasource", "pluginId": "influxdb", "pluginName": "InfluxDB" }
+  ],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.x" },
+    { "type": "datasource", "id": "influxdb", "name": "InfluxDB", "version": "2.x" },
+    { "type": "panel", "id": "timeseries", "name": "Time series", "version": "8.0" },
+    { "type": "panel", "id": "table", "name": "Table", "version": "8.0" }
+  ],
+  "title": "SCCC Switching & Backbone (LCARS)",
+  "timezone": "browser",
+  "schemaVersion": 37,
+  "style": "dark",
+  "tags": ["LCARS", "Switching", "Backbone"],
+  "templating": {
+    "list": [
+      {
+        "type": "query",
+        "name": "device",
+        "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+        "query": "import \"influxdata/influxdb/v1\"\nv1.tagValues(bucket: \"telegraf\", tag: \"sysName\")",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "sort": 1
+      },
+      {
+        "type": "custom",
+        "name": "if_pattern",
+        "query": "core|uplink|trunk|xe-|ge-|1/1/|port",
+        "current": { "text": "core|uplink|trunk", "value": "core|uplink|trunk" }
+      }
+    ]
+  },
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "type": "table",
+      "title": "Top 10 Interfaces by 95th Percentile bps",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 0 },
+      "options": { "showHeader": true },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "// 95th percentile bps by interface across all selected devices (use ifIndex, not ifDescr)\nfrom(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\")\n  |> filter(fn: (r) => r.sysName =~ /${device:regex}/)\n  |> filter(fn: (r) => r._field =~ /^(ifInOctets|ifOutOctets|ifHCInOctets|ifHCOutOctets)$/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: r._value * 8.0 }))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> pivot(rowKey: [\"_time\", \"sysName\", \"ifIndex\"], columnKey: [\"_field\"], valueColumn: \"_value\")\n  |> map(fn: (r) => ({ r with in_bps: if exists r.ifHCInOctets then r.ifHCInOctets else (if exists r.ifInOctets then r.ifInOctets else 0.0), out_bps: if exists r.ifHCOutOctets then r.ifHCOutOctets else (if exists r.ifOutOctets then r.ifOutOctets else 0.0) }))\n  |> map(fn: (r) => ({ r with bps: if r.in_bps > r.out_bps then r.in_bps else r.out_bps }))\n  |> group(columns: [\"sysName\", \"ifIndex\"])\n  |> quantile(column: \"bps\", q: 0.95, method: \"estimate_tdigest\")\n  |> keep(columns: [\"sysName\", \"ifIndex\", \"bps\"])\n  |> rename(columns: { bps: \"_value\" })\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 10)"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Device Uplink Throughput (bps)",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "bps" } },
+      "options": { "legend": { "displayMode": "list" } },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "from(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\")\n  |> filter(fn: (r) => r.sysName =~ /${device:regex}/)\n  |> filter(fn: (r) => r._field == \"ifInOctets\" or r._field == \"ifOutOctets\")\n  |> filter(fn: (r) => r.ifDescr =~ /core|uplink|trunk|xe-|ge-|1\\/1\\/|port/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> map(fn: (r) => ({ r with _value: r._value * 8.0, _field: if r._field == \"ifInOctets\" then \"in_bps\" else \"out_bps\" }))\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> yield(name: \"uplink_bps\")"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "title": "Top Interfaces by Error/Discard Rate (placeholder)",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 19 },
+      "options": { "showHeader": true },
+      "datasource": { "type": "influxdb", "uid": "${DS_INFLUXDB}" },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "flux",
+          "query": "// Requires ifInErrors, ifOutErrors, ifInDiscards, ifOutDiscards in telegraf\nfrom(bucket: \"telegraf\")\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n  |> filter(fn: (r) => r._measurement == \"interface\")\n  |> filter(fn: (r) => r._field =~ /if(In|Out)(Errors|Discards)/)\n  |> derivative(unit: 1s, nonNegative: true)\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\n  |> group(columns: [\"sysName\", \"ifDescr\"])\n  |> sum(column: \"_value\")\n  |> sort(columns: [\"_value\"], desc: true)\n  |> limit(n: 10)"
+        }
+      ],
+      "description": "To populate this panel, add IF-MIB error/discard OIDs to telegraf."
+    }
+  ]
+}
+
+

@@ -1,0 +1,15 @@
+notifiers:
+  # Microsoft Teams Webhook for critical alerts
+  - name: teams-it-ops
+    type: teams
+    uid: teams-it-ops-webhook
+    org_id: 1
+    is_default: false
+    settings:
+      url: "https://outlook.office.com/webhook/YOUR-TEAMS-WEBHOOK-URL-HERE"
+      title: "SCCC Network Alert"
+      sectiontitle: "Alert Details"
+      # Teams webhook expects a JSON payload
+      httpMethod: POST
+      # Optional: customize message
+      message: "{{ range .Alerts }}{{ .Annotations.description }}{{ end }}"

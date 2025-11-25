@@ -1,0 +1,637 @@
+=~=~=~=~=~=~=~=~=~=~=~= PuTTY log 2025.10.29 10:56:29 =~=~=~=~=~=~=~=~=~=~=~=
+show run[22D[Jsw-aa144-A24# show run[Jning-config 
+
+!Command: show running-config
+!Running configuration last done at: Sun Sep 28 21:53:58 2025
+!Time: Wed Oct 29 14:55:03 2025
+
+version 10.2(6) Bios:version 07.69 
+hostname sw-aa144-A24
+vdc sw-aa144-A24 id 1
+  limit-resource vlan minimum 16 maximum 4094
+  limit-resource vrf minimum 2 maximum 4096
+  limit-resource port-channel minimum 0 maximum 511
+  limit-resource m4route-mem minimum 58 maximum 58
+  limit-resource m6route-mem minimum 8 maximum 8
+
+feature telnet
+cfs eth distribute
+feature interface-vlan
+feature lacp
+feature dhcp
+feature vpc
+feature lldp
+feature vtp
+
+logging level otm 5
+username admin password 5 $5$/divel/a$iIT3rjW86FN0VeNWhnySDkGCI6Jdehmc0n7Vuk4dyQ/  role network-admin
+ip domain-lookup
+ip domain-name sccc.edu
+ip name-server 10.40.1.68 192.168.1.111
+copp profile strict
+vtp domain blob
+snmp-server user admin network-admin auth md5 0x731d176cbdfd0c83a2f0338c8c53ad2d priv des 0x731d176cbdfd0c83a2f0338c8c53ad2d localizedkey
+rmon event 1 description FATAL(1) owner PMON@FATAL
+rmon event 2 description CRITICAL(2) owner PMON@CRITICAL
+rmon event 3 description ERROR(3) owner PMON@ERROR
+rmon event 4 description WARNING(4) owner PMON@WARNING
+rmon event 5 description INFORMATION(5) owner PMON@INFO
+no service unsupported-transceiver
+
+ip route 0.0.0.0/0 192.168.2.1
+vlan 1-2,17,51,150-151,200-204,301-314,316-322,348-353,372-373,375,377,401-405,408,412-416,506,508,564,568,601,610-612,614-629,660,680,701-703,706-708,714,72
+2-723,726,728-731,733-737,740,749-750,764-766,772-775,780,788-791,801-804,806,809,816-821,824,826,832-833,835,840-842,845,848,999
+vlan 2
+  name SAN00
+vlan 17
+  name keepalivesVPC
+vlan 51
+  name DMZ2
+[7m--More--[mvlan 150
+  name ASA-LAN-FO
+vlan 151
+  name ASA-STFUL-FO
+vlan 200
+  name SLC_students
+vlan 201
+  name SLC-Students-Aruba
+vlan 202
+  name SLC-Staff-Aruba
+vlan 203
+  name SLC-Appliance-Aruba
+vlan 204
+  name SLC-Guest-Aruba
+vlan 301
+  name VOIP-A
+vlan 302
+  name VOIP-AA
+vlan 303
+  name VOIP-S
+vlan 304
+  name VOIP-H
+vlan 305
+  name VOIP-COS
+vlan 306
+  name VOIP-V
+vlan 307
+  name VOIP-SLC
+vlan 308
+  name VOIP-SLCCDE
+vlan 309
+  name VOIP-SLCAB
+vlan 310
+  name VOIP-B
+vlan 311
+  name VOIP-M
+vlan 312
+  name VOIP-C
+vlan 313
+  name VOIP-E
+vlan 314
+  name VOIP-EA
+vlan 316
+  name VOIP-T
+vlan 317
+  name VOIP-TA
+vlan 318
+[7m--More--[m  name VOIP-TB
+vlan 319
+  name VOIP-TD
+vlan 320
+  name VOIP-TT
+vlan 321
+  name VOIP-SLCT
+vlan 322
+  name VOIP-CAH
+vlan 348
+  name PSEC-Servers
+vlan 349
+  name PSEC-A-AA
+vlan 350
+  name PSEC-S-B-H-Cos-V-M
+vlan 351
+  name PSEC-SLC
+vlan 352
+  name PSEC-T-TA-TB-TD-TT
+vlan 353
+  name PSEC-C-E-EAnnex-CAH
+vlan 372
+  name DAC-Servers
+vlan 373
+  name DAC-A-AA
+vlan 375
+  name DAC-SLC
+vlan 377
+  name DAC-C-E-Eannex-CAH
+vlan 401
+  name Servers
+vlan 402
+  name Printers
+vlan 403
+  name Citrix
+vlan 404
+  name VMotionLive
+vlan 405
+  name DigitalSignage
+vlan 408
+  name DR-site-equipment
+vlan 412
+  name Stor2
+vlan 413
+  name Stor413
+vlan 414
+  name Nutan-IPMI
+[7m--More--[mvlan 415
+  name Nutan-VMWareVmotion
+vlan 416
+  name Nutan-VMMgmtCVMClst
+vlan 506
+  name WLAN-IPads
+vlan 508
+  name WLAN-Public
+vlan 564
+  name Projectors
+vlan 568
+  name HDMI
+vlan 601
+  name LAN2
+vlan 610
+  name IT-Staff
+vlan 611
+  name OSPF1
+vlan 612
+  name OSPF2
+vlan 614
+  name OSPF10-AA144-A48
+vlan 615
+  name OSPF10-T48-A48
+vlan 616
+  name OSPF10-Epworth
+vlan 617
+  name OSPF10-TechSchool
+vlan 618
+  name OSPF-SLC151-Aruba
+vlan 619
+  name OSPF10-V201
+vlan 620
+  name OSPF10-B101
+vlan 621
+  name OSPF10-TA107
+vlan 622
+  name OSPF10-A144-1
+vlan 623
+  name OSPF10-A144-2
+vlan 624
+  name OSPF10-SharpCC
+vlan 625
+  name OSPF10-AA105
+vlan 626
+  name OSPF10-SU121
+vlan 627
+[7m--More--[m  name OSPF10-COS109
+vlan 628
+  name OSPF10-HealthCenter
+vlan 629
+  name OSPF-AA144-Aruba0
+vlan 660
+  name VDI-Desktops
+vlan 680
+  name A001
+vlan 701
+  name A144-Staff
+vlan 702
+  name A103
+vlan 703
+  name A136
+vlan 706
+  name A149
+vlan 707
+  name A166A
+vlan 708
+  name A166
+vlan 714
+  name A192
+vlan 722
+  name ArubaAP-A
+vlan 723
+  name ArubaAP-Outdoor
+vlan 726
+  name AA131
+vlan 728
+  name AA137
+vlan 729
+  name AA155
+vlan 730
+  name AA159
+vlan 731
+  name AA163
+vlan 733
+  name AA105-Staff
+vlan 734
+  name AA101
+vlan 735
+  name AA109
+vlan 736
+  name AA112
+vlan 737
+  name AA113
+[7m--More--[mvlan 740
+  name test-vlan
+vlan 749
+  name CosmoBuilding
+vlan 750
+  name ArubaAP-COS
+vlan 764
+  name V103-AgLab
+vlan 765
+  name AgBuilding
+vlan 766
+  name ArubaAP-V
+vlan 772
+  name E117-E213-EpworthLabs
+vlan 773
+  name EpworthBuilding
+vlan 774
+  name MM-Equipment-in-E
+vlan 775
+  name ArubaAP-E
+vlan 780
+  name ColvinBuilding
+vlan 788
+  name H109-HumLab
+vlan 789
+  name HumanitiesBuilding
+vlan 790
+  name HumanitiesTest
+vlan 791
+  name ArubaAP-H
+vlan 801
+  name SWKTS-Data
+vlan 802
+  name TechSchoolLabs
+vlan 803
+  name TechLectureCapture
+vlan 804
+  name TechHVAC
+vlan 806
+  name ArubaAP-T
+vlan 809
+  name TA-WorkForceCenter
+vlan 816
+  name MaintenanceBuilding
+vlan 817
+  name HVAC-Maintenance
+vlan 818
+[7m--More--[m  name Fire-Alarm-System
+vlan 819
+  name HVAC-maintenance
+vlan 820
+  name Gym-Pressbox
+vlan 821
+  name SA-building
+vlan 824
+  name SLC-Buildings
+vlan 826
+  name ArubaAP-SLC
+vlan 832
+  name SU108-Bookstore
+vlan 833
+  name StudentBuilding
+vlan 835
+  name ArubaAP-S
+vlan 840
+  name CAH-General
+vlan 841
+  name CAH-Labs
+vlan 842
+  name CAH-Sim-Record
+vlan 845
+  name ArubaAP-CAH
+vlan 848
+  name SCCWiredNetwork
+vlan 999
+  name Gym-Video
+
+spanning-tree port type edge bpduguard default
+service dhcp
+ip dhcp relay
+ip dhcp relay information option trust
+ip dhcp relay information trust-all
+ipv6 dhcp relay
+vrf context management
+vpc domain 10
+  role priority 20
+  peer-keepalive destination 172.20.11.1 source 172.20.11.2 vrf default
+
+
+interface Vlan1
+  no shutdown
+  ip address 192.168.2.71/16
+  ip dhcp relay address 10.40.1.40 
+
+[7m--More--[minterface Vlan17
+  no shutdown
+  ip address 172.20.11.2/30
+
+interface port-channel15
+  description connection to port 24 switch-peer link
+  switchport
+  switchport mode trunk
+  switchport trunk allowed vlan 1-16,18-4094
+  spanning-tree port type network
+  vpc peer-link
+
+interface Ethernet1/1
+  description Nutanix Node 1 port 0
+  switchport
+  switchport mode trunk
+  switchport trunk native vlan 416
+  switchport trunk allowed vlan 1,51,302,313,372,401,403-404,412,414-416,610-612,660
+  spanning-tree port type edge trunk
+  vpc orphan-port suspend
+  no shutdown
+
+interface Ethernet1/2
+  description Nutanix Node 2 port 0
+  switchport
+  switchport mode trunk
+  switchport trunk native vlan 416
+  switchport trunk allowed vlan 1,51,302,313,372,401,403-404,412,414-416,610-612,660
+  spanning-tree port type edge trunk
+  vpc orphan-port suspend
+  no shutdown
+
+interface Ethernet1/3
+  description Nutanix Node 3 port 0
+  switchport
+  switchport mode trunk
+  switchport trunk native vlan 416
+  switchport trunk allowed vlan 1,51,302,313,372,401,403-404,412,414-416,610-612,660
+  spanning-tree port type edge trunk
+  vpc orphan-port suspend
+  no shutdown
+
+interface Ethernet1/4
+  switchport
+
+interface Ethernet1/5
+  switchport
+[7m--More--[m  no shutdown
+
+interface Ethernet1/6
+  switchport
+
+interface Ethernet1/7
+  description SW-A163-Aruba-TestingCenter
+  switchport
+  switchport mode trunk
+  switchport trunk allowed vlan 1,201-204,301,351-353,375,402,404,610,702,722,733
+  spanning-tree port type edge trunk
+  no shutdown
+
+interface Ethernet1/8
+  description SW-AA144-access 49
+  switchport
+  switchport mode trunk
+  no shutdown
+
+interface Ethernet1/9
+  description SW-COS109-PRIM
+  switchport
+  switchport mode trunk
+  no shutdown
+
+interface Ethernet1/10
+  switchport
+
+interface Ethernet1/11
+  switchport
+
+interface Ethernet1/12
+  switchport
+
+interface Ethernet1/13
+  switchport
+
+interface Ethernet1/14
+  switchport
+
+interface Ethernet1/15
+  switchport
+
+interface Ethernet1/16
+  description Heartbeat to SW-AA144-A48 port 16
+  switchport
+  switchport access vlan 17
+[7m--More--[m  no shutdown
+
+interface Ethernet1/17
+  switchport
+  switchport access vlan 401
+  no shutdown
+
+interface Ethernet1/18
+  switchport
+
+interface Ethernet1/19
+  switchport
+
+interface Ethernet1/20
+  description SLC1151 to AA144 9k
+  switchport
+  switchport mode trunk
+  flowcontrol receive on
+  no shutdown
+
+interface Ethernet1/21
+  switchport
+  speed 25000
+  duplex full
+  no shutdown
+
+interface Ethernet1/22
+  description COS109 to AA144 port 22
+  switchport
+  switchport mode trunk
+  flowcontrol receive on
+  fec fc-fec
+  no shutdown
+
+interface Ethernet1/23
+  description test of sfp25
+  switchport
+  switchport mode trunk
+  no shutdown
+
+interface Ethernet1/24
+  description SharpChampionCenter
+  switchport
+  switchport mode trunk
+  no shutdown
+
+interface Ethernet1/25
+[7m--More--[m  switchport
+
+interface Ethernet1/26
+  description SW-AA144-A24 To SWA-V201
+  switchport
+  switchport mode trunk
+  switchport trunk allowed vlan 1,200-204,306,352-353,375,402,404,564,619,723,733,764-766,806,817
+  fec fc-fec
+  no shutdown
+
+interface Ethernet1/27
+  switchport
+
+interface Ethernet1/28
+  description SW-AA144-A24 TO SWA-AA105
+  switchport
+  switchport mode trunk
+  speed 25000
+  fec fc-fec
+  no shutdown
+
+interface Ethernet1/29
+  switchport
+
+interface Ethernet1/30
+  description SU121 to AA144 9k 24
+  switchport
+  switchport mode trunk
+  flowcontrol receive on
+  fec fc-fec
+  no shutdown
+
+interface Ethernet1/31
+  description B101 to AA144 port 1/22
+  switchport
+  switchport mode trunk
+  fec fc-fec
+  no shutdown
+
+interface Ethernet1/32
+  description B101 to AA144 port 1/22
+  switchport
+  switchport mode trunk
+  fec fc-fec
+  no shutdown
+
+interface Ethernet1/33
+[7m--More--[m  switchport
+  switchport mode trunk
+  fec fc-fec
+  no shutdown
+
+interface Ethernet1/34
+  switchport
+  switchport mode trunk
+  switchport trunk allowed vlan 1,201-204,733,820,835
+  flowcontrol receive on
+  no shutdown
+
+interface Ethernet1/35
+  description 1/35 SW-SoftballPB-Aruba
+  switchport
+  flowcontrol receive on
+  no shutdown
+
+interface Ethernet1/36
+  description FortiGate2-Port36-United-ISP
+  switchport
+  speed 10000
+
+interface Ethernet1/37
+  description UNITED-ISP(internet-connection)
+  switchport
+  switchport mode trunk
+  fec fc-fec
+  no shutdown
+
+interface Ethernet1/38
+  switchport
+
+interface Ethernet1/39
+  switchport
+
+interface Ethernet1/40
+  description E208 to AA144-A24
+  switchport
+  switchport mode trunk
+  fec fc-fec
+  no shutdown
+
+interface Ethernet1/41
+
+interface Ethernet1/42
+  description SA208 to AA144-A24
+[7m--More--[m  switchport
+  switchport mode trunk
+  fec fc-fec
+  no shutdown
+
+interface Ethernet1/43
+  switchport
+
+interface Ethernet1/44
+  description HealthCenter to AA144-A24
+  switchport
+  switchport mode trunk
+  fec fc-fec
+  no shutdown
+
+interface Ethernet1/45
+  description SWA-AA148 6100 Cecil's Office
+  switchport
+  switchport mode trunk
+  no shutdown
+
+interface Ethernet1/46
+  switchport
+
+interface Ethernet1/47
+  switchport
+
+interface Ethernet1/48
+  description SWA-AA148 6100 Cecil office
+  switchport
+  switchport mode trunk
+  no shutdown
+
+interface Ethernet1/49
+  description SW-AA144-A24 CONNECTION TO  SW-AA144-A48
+  switchport
+  switchport mode trunk
+  switchport trunk allowed vlan 1-16,18-4094
+  channel-group 15 mode active
+  no shutdown
+
+interface Ethernet1/50
+  switchport
+
+interface Ethernet1/51
+  switchport
+
+[7m--More--[minterface Ethernet1/52
+  switchport
+
+interface Ethernet1/53
+  switchport
+
+interface Ethernet1/54
+  switchport
+
+interface mgmt0
+  shutdown force
+  vrf member management
+  ip address 192.168.2.71/24
+line console
+line vty
+boot nxos bootflash:/nxos64-cs.10.2.6.M.bin 
+
+
+
+sw-aa144-A24#    [J[J[Jshow clock 
+Warning: No NTP peer/server configured. Time may be out of sync.
+14:55:12.561 UTC Wed Oct 29 2025
+Time source is NTP
+sw-aa144-A24# exit

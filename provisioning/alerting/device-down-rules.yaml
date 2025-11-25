@@ -1,0 +1,66 @@
+groups:
+  - name: Network Device Monitoring
+    folder: Network Operations
+    interval: 30s
+    org_id: 1
+    rules:
+      # Alert: Device Down - Stale sysUpTime (last update older than 5 minutes)
+      - uid: device-down-stale-uptime
+        title: "Network Device Down - Stale Data"
+        condition: B
+        data:
+          # Query A: Get the age of the last sysUpTime report for each device
+          - refId: A
+            relativeTimeRange:
+              from: 10  # Look back 10 minutes
+              to: 0
+            datasourceUid: ${DS_INFLUXDB}
+            model:
+              queryType: flux
+              query: |
+                from(bucket: "telegraf")
+                  |> range(start: -10m)
+                  |> filter(fn: (r) => r._measurement == "snmp" and r._field == "sysUpTime")
+                  |> group(columns: ["source", "sysName"])
+                  |> last()
+                  |> map(fn: (r) => ({ 
+                    r with 
+                    _value: float(v: duration(v: int(v: now()) - int(v: r._time))) / 1000000000.0 / 60.0,
+                    _field: "age_minutes",
+                    _measurement: "device_availability"
+                  }))
+          # Query B: Threshold - alert if age > 5 minutes
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              type: threshold
+              datasource:
+                type: __expr__
+                uid: __expr__
+              conditions:
+                - evaluator:
+                    params:
+                      - 5  # Alert if age is greater than 5 minutes
+                    type: gt
+                  operator:
+                    type: and
+                  query:
+                    params:
+                      - A
+                  reducer:
+                    type: last
+                  type: query
+        no_data_state: Alerting  # If no data, device is down
+        exec_err_state: Alerting
+        for: 2m  # Wait 2 minutes before alerting (to avoid false positives)
+        annotations:
+          summary: "Device {{ $labels.sysName }} ({{ $labels.source }}) is down or unreachable"
+          description: "Device {{ $labels.sysName }} (IP: {{ $labels.source }}) last reported sysUpTime {{ printf \"%.1f\" $value }} minutes ago. Expected updates every 60 seconds. The device may be unreachable or not responding to SNMP."
+          runbook_url: "https://wiki.sccc.edu/network-troubleshooting"  # Update with your runbook URL
+        labels:
+          severity: critical
+          team: network-ops
+          alert_type: device_availability

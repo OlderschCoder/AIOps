@@ -1,0 +1,731 @@
+###############################################################################
+#                                GLOBAL AGENT CONFIGURATION                   #
+###############################################################################
+[agent]
+  interval = "60s"
+  round_interval = true
+  metric_batch_size = 1000
+  metric_buffer_limit = 10000
+  flush_interval = "20s"
+  flush_jitter   = "5s"
+  collection_jitter = "5s"
+  precision = ""
+  hostname = ""
+  omit_hostname = false
+
+  # Use gosmi so numeric OIDs work without local MIB files
+  snmp_translator = "gosmi"
+
+###############################################################################
+#                                 OUTPUT PLUGINS                              #
+###############################################################################
+[[outputs.influxdb_v2]]
+  urls            = ["http://10.0.0.22:8086"]
+  token           = "FJyv2E4WC_xNxF41zPvWCB4bYHEHD_lZ3R1sKv4Gfzc1HcPAMz-UQGkcMMD4-_mriZvDXNVAz-ERPcJfjBXXIA=="
+  organization    = "SCCC"
+  bucket          = "telegraf"
+  timeout         = "30s"
+  flush_interval = "20s"
+  metric_batch_size = 1000
+  metric_buffer_limit = 200000
+  content_encoding = "gziop"
+
+###############################################################################
+#                                 INPUT PLUGINS                               #
+###############################################################################
+# NOTE: ICMP/ping intentionally omitted so Internet latency/loss come from FortiGate.
+
+
+###############################################################################
+# SNMP – Aruba 6300 Switches (numeric OIDs only) - ADDED CPU, MEMORY, ERRORS #
+###############################################################################
+[[inputs.snmp]]
+  # Poll less aggressively to avoid "collection took longer" warnings.
+  interval = "60s"
+  timeout  = "5s"
+  retries  = 2
+
+  agents = [
+    "udp://192.168.2.196:161", "udp://192.168.2.201:161", "udp://192.168.2.1:161",
+    "udp://192.168.2.40:161",  "udp://192.168.2.171:161", "udp://192.168.2.175:161",
+    "udp://192.168.2.179:161", "udp://192.168.2.181:161", "udp://192.168.2.182:161",
+    "udp://192.168.2.183:161", "udp://192.168.2.184:161", "udp://192.168.2.186:161",
+    "udp://192.168.2.187:161", "udp://192.168.2.188:161", "udp://192.168.2.189:161",
+    "udp://192.168.2.190:161", "udp://192.168.2.195:161", "udp://192.168.2.199:161",
+    "udp://192.168.2.200:161", "udp://192.168.2.202:161",
+    "udp://192.168.2.203:161", "udp://192.168.2.204:161", "udp://192.168.2.205:161",
+    "udp://192.168.2.212:161", "udp://10.70.1.1:161",    "udp://10.70.34.1:161"
+  ]
+  version = 3
+
+  sec_name       = "MonitorUser"
+  auth_protocol  = "SHA"
+  auth_password  = "SecureAuth123"
+  priv_protocol  = "AES"
+  priv_password  = "SecurePriv456"
+  sec_level      = "authPriv"
+
+  max_repetitions = 25
+  agent_host_tag  = "source"
+
+  # System info
+  [[inputs.snmp.field]]  # sysName
+    oid  = "1.3.6.1.2.1.1.5.0"
+    name = "sysName"
+    is_tag = true
+
+  [[inputs.snmp.field]]  # sysDescr
+    oid  = "1.3.6.1.2.1.1.1.0"
+    name = "sysDescr"
+    is_tag = true
+ 
+  [[inputs.snmp.field]]  # sysUpTime
+    oid  = "1.3.6.1.2.1.1.3.0"
+    name = "sysUpTime"
+
+  [[inputs.snmp.field]]  # sysLocation - *RECOMMENDED: Configure this on your switches for building names*
+    oid  = "1.3.6.1.2.1.1.6.0"
+    name = "sysLocation"
+    is_tag = true # Make sysLocation a tag for easy filtering in Grafana
+
+  # --- NEW: Aruba Specific CPU & Memory (PLACEHOLDER OIDs - REPLACE ME!) ---
+  # You MUST find the correct numeric OIDs for CPU and Memory utilization on your Aruba 6300 switches.
+  # Consult Aruba's MIB documentation or an SNMP walk for these.
+  [[inputs.snmp.field]] # Placeholder for Aruba CPU Utilization
+    oid  = "1.3.6.1.4.1.14823.2.2.1.1.1.2.1.5.0" # <<< REPLACE WITH ACTUAL ARUBA CPU OID
+    name = "arubaCpuUtil"
+  [[inputs.snmp.field]] # Placeholder for Aruba Memory Utilization
+    oid  = "1.3.6.1.4.1.14823.2.2.1.1.1.2.1.6.0" # <<< REPLACE WITH ACTUAL ARUBA MEMORY OID
+    name = "arubaMemUtil"
+  # --------------------------------------------------------------------------
+
+  # Optional legacy ifTable (32-bit)
+  [[inputs.snmp.table]]
+    name = "interface_legacy"
+    oid  = "1.3.6.1.2.1.2.2"
+    inherit_tags = ["sysName", "sysLocation"] # Inherit sysLocation too
+
+    [[inputs.snmp.table.field]]  # ifDescr
+      name   = "ifDescr"
+      oid    = "1.3.6.1.2.1.2.2.1.2"
+      is_tag = true
+
+    [[inputs.snmp.table.field]]  # ifType
+      name = "ifType"
+      oid  = "1.3.6.1.2.1.2.2.1.3"
+
+    [[inputs.snmp.table.field]]  # ifSpeed
+      name = "ifSpeed"
+      oid  = "1.3.6.1.2.1.2.2.1.5"
+
+    [[inputs.snmp.table.field]]  # ifAdminStatus
+      name = "ifAdminStatus"
+      oid  = "1.3.6.1.2.1.2.2.1.7"
+
+    [[inputs.snmp.table.field]]  # ifOperStatus
+      name = "ifOperStatus"
+      oid  = "1.3.6.1.2.1.2.2.1.8"
+
+    [[inputs.snmp.table.field]]  # ifInOctets
+      name = "ifInOctets"
+      oid  = "1.3.6.1.2.1.2.2.1.10"
+
+    [[inputs.snmp.table.field]]  # ifOutOctets
+      name = "ifOutOctets"
+      oid  = "1.3.6.1.2.1.2.2.1.16"
+    
+    # --- NEW: Aruba Interface Errors (from IF-MIB) ---
+    [[inputs.snmp.table.field]]
+      name = "ifInErrors"
+      oid  = "1.3.6.1.2.1.2.2.1.14"
+    [[inputs.snmp.table.field]]
+      name = "ifOutErrors"
+      oid  = "1.3.6.1.2.1.2.2.1.20"
+    [[inputs.snmp.table.field]]
+      name = "ifInDiscards"
+      oid  = "1.3.6.1.2.1.2.2.1.13"
+    [[inputs.snmp.table.field]]
+      name = "ifOutDiscards"
+      oid  = "1.3.6.1.2.1.2.2.1.19"
+    # -------------------------------------------------
+
+  # 64-bit interface counters and packet breakdown (numeric OIDs only)
+  [[inputs.snmp.table]]
+    name = "interface"
+    oid  = "1.3.6.1.2.1.31.1.1.1"
+    inherit_tags = ["sysName", "sysLocation"] # Inherit sysLocation too
+
+    [[inputs.snmp.table.field]]
+      name   = "ifName"
+      oid    = "1.3.6.1.2.1.31.1.1.1.1"
+      is_tag = true
+
+    [[inputs.snmp.table.field]]
+      name = "ifHighSpeed"
+      oid  = "1.3.6.1.2.1.31.1.1.1.15"
+
+    [[inputs.snmp.table.field]]
+      name = "ifAlias"
+      oid  = "1.3.6.1.2.1.31.1.1.1.18"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCInOctets"
+      oid  = "1.3.6.1.2.1.31.1.1.1.6"
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutOctets"
+      oid  = "1.3.6.1.2.1.31.1.1.1.10"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCInUcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.7"
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutUcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.11"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCInMulticastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.8"
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutMulticastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.12"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCInBroadcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.9"
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutBroadcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.13"
+
+  # --- NEW: Fiber Optic DDM for Aruba (PLACEHOLDER OIDs - REPLACE ME!) ---
+  # This section assumes Aruba switches provide DDM data per interface.
+  # You MUST find the correct numeric OIDs for your specific Aruba hardware and transceivers.
+  # Common MIBs for this might be vendor-specific or IEEE 802.3 related.
+  [[inputs.snmp.table]]
+    name         = "aruba_fiber_ddm"
+    oid          = "1.3.6.1.4.1.14823.2.2.1.1.1.3.1.5" # <<< REPLACE WITH ACTUAL ARUBA DDM TABLE OID
+    inherit_tags = ["sysName", "sysLocation", "ifName"] # Inherit sysLocation and ifName
+
+    [[inputs.snmp.table.field]] # Placeholder for RX Power in dBm
+      name  = "aruba_rx_power_dbm"
+      oid   = "1.3.6.1.4.1.14823.2.2.1.1.1.3.1.5.1" # <<< REPLACE WITH ACTUAL ARUBA RX POWER OID
+    [[inputs.snmp.table.field]] # Placeholder for TX Power in dBm
+      name  = "aruba_tx_power_dbm"
+      oid   = "1.3.6.1.4.1.14823.2.2.1.1.1.3.1.5.2" # <<< REPLACE WITH ACTUAL ARUBA TX POWER OID
+    # Add other DDM fields like temperature, voltage, current if desired.
+  # --------------------------------------------------------------------------
+
+
+###############################################################################
+# SNMP – FortiGate (Internet latency/loss via SD-WAN / link-monitor checks)
+###############################################################################
+[[inputs.snmp]]
+  timeout         = "5s"
+  retries         = 3
+  max_repetitions = 25
+  agent_host_tag  = "source"
+
+  agents = ["udp://192.168.1.1:161"]
+  version = 3
+
+  sec_name       = "MonitorUser"
+  auth_protocol  = "SHA"
+  auth_password  = "StrongAuthPass@32456##"
+  priv_protocol  = "AES"
+  priv_password  = "StrongPrivPass@32456##"
+  sec_level      = "authPriv"
+
+  # System info
+  [[inputs.snmp.field]]  # sysName
+    oid  = "1.3.6.1.2.1.1.5.0"
+    name = "sysName"
+    is_tag = true
+
+  [[inputs.snmp.field]]  # sysDescr
+    oid  = "1.3.6.1.2.1.1.1.0"
+    name = "sysDescr"
+    is_tag = true
+ 
+  [[inputs.snmp.field]]  # sysUpTime
+    oid  = "1.3.6.1.2.1.1.3.0"
+    name = "sysUpTime"
+
+  # FortiGate summary
+  [[inputs.snmp.field]]
+    name = "fgSysSesCount"
+    oid  = "1.3.6.1.4.1.12356.101.4.1.2.0"
+  [[inputs.snmp.field]]
+    name = "fgSysCpuUsage"
+    oid  = "1.3.6.1.4.1.12356.101.4.1.3.0"
+  [[inputs.snmp.field]]
+    name = "fgSysMemUsage"
+    oid  = "1.3.6.1.4.1.12356.101.4.1.4.0"
+
+  # FortiGate interfaces (64-bit ifXTable)
+  [[inputs.snmp.table]]
+    name = "interface"
+    oid  = "1.3.6.1.2.1.31.1.1.1"
+    inherit_tags = ["sysName"]
+
+    [[inputs.snmp.table.field]]
+      name   = "ifName"
+      oid    = "1.3.6.1.2.1.31.1.1.1.1"
+      is_tag = true
+    [[inputs.snmp.table.field]]
+      name = "ifHCInOctets"
+      oid  = "1.3.6.1.2.1.31.1.1.1.6"
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutOctets"
+      oid  = "1.3.6.1.2.1.31.1.1.1.10"
+    [[inputs.snmp.table.field]]
+      name = "ifHighSpeed"
+      oid  = "1.3.6.1.2.1.31.1.1.1.15"
+    [[inputs.snmp.table.field]]
+      name = "ifAlias"
+      oid  = "1.3.6.1.2.1.31.1.1.1.18"
+    [[inputs.snmp.table.field]]
+      name = "ifHCInUcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.7"
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutUcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.11"
+    [[inputs.snmp.table.field]]
+      name = "ifHCInMulticastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.8"
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutMulticastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.12"
+    [[inputs.snmp.table.field]]
+      name = "ifHCInBroadcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.9"
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutBroadcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.13"
+
+  # SD-WAN / Link-Monitor Health Checks (loss/latency per target)
+  # Use a new measurement name to avoid historical string-type conflicts in InfluxDB.
+  [[inputs.snmp.table]]
+    name          = "fortigate_healthcheck_v2"
+    oid           = "1.3.6.1.4.1.12356.101.4.9.2.1"
+    inherit_tags = ["sysName"]
+
+    # Tags
+    [[inputs.snmp.table.field]]
+      name   = "hc_name"
+      oid    = "1.3.6.1.4.1.12356.101.4.9.2.1.2"
+      is_tag = true
+    [[inputs.snmp.table.field]]
+      name   = "ifName"
+      oid    = "1.3.6.1.4.1.12356.101.4.9.2.1.14"
+      is_tag = true
+    [[inputs.snmp.table.field]]
+      name   = "vdom"
+      oid    = "1.3.6.1.4.1.12356.101.4.9.2.1.10"
+      is_tag = true
+
+    # Metrics
+    [[inputs.snmp.table.field]]
+      name = "packet_loss_pct"
+      oid  = "1.3.6.1.4.1.12356.101.4.9.2.1.9"
+    [[inputs.snmp.table.field]]
+      name = "latency_ms"
+      oid  = "1.3.6.1.4.1.12356.101.4.9.2.1.5"
+    [[inputs.snmp.table.field]]
+      name = "pkts_sent"
+      oid  = "1.3.6.1.4.1.12356.101.4.9.2.1.7"
+    [[inputs.snmp.table.field]]
+      name = "pkts_recv"
+      oid  = "1.3.6.1.4.1.12356.101.4.9.2.1.8"
+
+
+###############################################################################
+# SYSLOG (FortiGate denies/IPS) – unprivileged port to avoid bind issues
+###############################################################################
+[[inputs.syslog]]
+  server = "udp4://:5514"
+  best_effort = true
+
+
+###############################################################################
+# PROCESSORS
+###############################################################################
+# Ensure health-check numeric fields are stored as numbers (for mean/avg)
+[[processors.converter]]
+  namepass = ["fortigate_healthcheck_v2"]
+  [processors.converter.fields]
+    float = ["packet_loss_pct", "latency_ms"]
+    integer = ["pkts_sent", "pkts_recv"]
+
+# Parse a few useful tags out of FortiGate syslog lines
+[[processors.regex]]
+  namepass = ["syslog"]
+  [[processors.regex.tags]]
+    key = "message"
+    pattern = ".*subtype=(\\S+)"
+    replacement = "${1}"
+    result_key = "subtype"
+  [[processors.regex.tags]]
+    key = "message"
+    pattern = ".*eventtype=(\\S+)"
+    replacement = "${1}"
+    result_key = "eventtype"
+  [[processors.regex.tags]]
+    key = "message"
+    pattern = ".*action=(\\S+)"
+    replacement = "${1}"
+    result_key = "action"
+  [[processors.regex.tags]]
+    key = "message"
+    pattern = ".*src=(\\S+)"
+    replacement = "${1}"
+    result_key = "src_ip"
+  [[processors.regex.tags]]
+    key = "message"
+    pattern = ".*attack(id)?=(\\S+)"
+    replacement = "${2}"
+    result_key = "attack"
+    
+###############################################################################
+# SNMP – Cisco Nexus 9000 (numeric OIDs only) - First block of Cisco Agents
+###############################################################################
+[[inputs.snmp]]
+  interval        = "60s"
+  timeout         = "5s"
+  retries         = 2
+  max_repetitions = 10
+  agent_host_tag  = "source"
+
+  agents =["udp://192.168.2.70:161", "udp://192.168.2.72:161", "udp://192.168.2.73:161"]
+  
+  version = 3
+  sec_name      = "MonitorUser"
+  auth_protocol = "SHA"
+  auth_password = "StrongAuthPass@32456##"
+  priv_protocol = "AES"
+  priv_password = "StrongPrivPass@32456##"
+  sec_level     = "authPriv"
+
+  # Identity
+  [[inputs.snmp.field]]  # sysName
+    oid  = "1.3.6.1.2.1.1.5.0"
+    name = "sysName"
+    is_tag = true
+
+  [[inputs.snmp.field]]  # sysDescr
+    oid  = "1.3.6.1.2.1.1.1.0"
+    name = "sysDescr"
+    is_tag = true
+  [[inputs.snmp.field]]  # sysUpTime
+    oid  = "1.3.6.1.2.1.1.3.0"
+    name = "sysUpTime"
+
+  [[inputs.snmp.field]]  # sysLocation (optional) - *RECOMMENDED: Configure this on your switches for building names*
+    oid  = "1.3.6.1.2.1.1.6.0"
+    name = "sysLocation"
+    is_tag = true # Make sysLocation a tag for easy filtering in Grafana
+
+  # Interfaces (64-bit counters)
+  [[inputs.snmp.table]]
+    name          = "interface"
+    oid           = "1.3.6.1.2.1.31.1.1.1"
+    inherit_tags = ["sysName", "sysLocation"] # Inherit sysLocation too
+
+    [[inputs.snmp.table.field]]  # ifName (tag)
+      name   = "ifName"
+      oid    = "1.3.6.1.2.1.31.1.1.1.1"
+      is_tag = true
+
+    [[inputs.snmp.table.field]]  # ifAlias
+      name = "ifAlias"
+      oid  = "1.3.6.1.2.1.31.1.1.1.18"
+
+    [[inputs.snmp.table.field]]  # ifHighSpeed
+      name = "ifHighSpeed"
+      oid  = "1.3.6.1.2.1.31.1.1.1.15"
+
+    [[inputs.snmp.table.field]]  # throughput
+      name = "ifHCInOctets"
+      oid  = "1.3.6.1.2.1.31.1.1.1.6"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutOctets"
+      oid  = "1.3.6.1.2.1.31.1.1.1.10"
+
+    [[inputs.snmp.table.field]]  # packet breakdown
+      name = "ifHCInUcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.7"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutUcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.11"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCInMulticastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.8"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutMulticastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.12"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCInBroadcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.9"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutBroadcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.13"
+
+
+  # Interface status and errors (legacy ifTable, limited fields only)
+  [[inputs.snmp.table]]
+    name          = "if_status_errors"
+    oid           = "1.3.6.1.2.1.2.2.1"
+    inherit_tags = ["sysName", "sysLocation"] # Inherit sysLocation too
+
+    [[inputs.snmp.table.field]]  # ifAdminStatus
+      name = "ifAdminStatus"
+      oid  = "1.3.6.1.2.1.2.2.1.7"
+
+    [[inputs.snmp.table.field]]  # ifOperStatus
+      name = "ifOperStatus"
+      oid  = "1.3.6.1.2.1.2.2.1.8"
+
+    [[inputs.snmp.table.field]]  # errors/discards/unknown
+      name = "ifInErrors"
+      oid  = "1.3.6.1.2.1.2.2.1.14"
+
+    [[inputs.snmp.table.field]]
+      name = "ifOutErrors"
+      oid  = "1.3.6.1.2.1.2.2.1.20"
+
+    [[inputs.snmp.table.field]]
+      name = "ifInDiscards"
+      oid  = "1.3.6.1.2.1.2.2.1.13"
+
+    [[inputs.snmp.table.field]]
+      name = "ifOutDiscards"
+      oid  = "1.3.6.1.2.1.2.2.1.19"
+
+    [[inputs.snmp.table.field]]
+      name = "ifInUnknownProtos"
+      oid  = "1.3.6.1.2.1.2.2.1.15"
+
+
+  # CPU (CISCO-PROCESS-MIB, *Rev counters*)
+  [[inputs.snmp.table]]
+    name          = "cisco_cpu"
+    oid           = "1.3.6.1.4.1.9.9.109.1.1.1.1"
+    inherit_tags = ["sysName", "sysLocation"] # Inherit sysLocation too
+
+    [[inputs.snmp.table.field]]
+      name = "cpmCPUTotal5secRev"
+      oid  = "1.3.6.1.4.1.9.9.109.1.1.1.1.6"
+
+    [[inputs.snmp.table.field]]
+      name = "cpmCPUTotal1minRev"
+      oid  = "1.3.6.1.4.1.9.9.109.1.1.1.1.7"
+
+    [[inputs.snmp.table.field]]
+      name = "cpmCPUTotal5minRev"
+      oid  = "1.3.6.1.4.1.9.9.109.1.1.1.1.8"
+
+
+  # Memory (CISCO-MEMORY-POOL-MIB)
+  [[inputs.snmp.table]]
+    name          = "cisco_memory_pool"
+    oid           = "1.3.6.1.4.1.9.9.48.1.1.1"
+    inherit_tags = ["sysName", "sysLocation"] # Inherit sysLocation too
+
+    [[inputs.snmp.table.field]]  # Pool Name
+      name   = "ciscoMemoryPoolName"
+      oid    = "1.3.6.1.4.1.9.9.48.1.1.1.2"
+      is_tag = true
+
+    [[inputs.snmp.table.field]]  # Used Bytes
+      name = "ciscoMemoryPoolUsed"
+      oid  = "1.3.6.1.4.1.9.9.48.1.1.1.5"
+
+    [[inputs.snmp.table.field]]  # Free Bytes
+      name = "ciscoMemoryPoolFree"
+      oid  = "1.3.6.1.4.1.9.9.48.1.1.1.6"
+
+  # --- NEW: Fiber Optic DDM for Cisco Nexus (PLACEHOLDER OIDs - REPLACE ME!) ---
+  # This section assumes Cisco Nexus switches provide DDM data per interface.
+  # You MUST find the correct numeric OIDs for your specific Cisco Nexus hardware and transceivers.
+  # Consult Cisco's MIBs (e.g., CISCO-ENTITY-SENSOR-MIB, CISCO-ENTITY-VENDORTYPE-OID-MIB, or DDM-specific MIBs).
+  [[inputs.snmp.table]]
+    name         = "cisco_fiber_ddm"
+    oid          = "1.3.6.1.4.1.9.9.91.1.1.1.1" # <<< REPLACE WITH ACTUAL CISCO DDM TABLE OID (e.g., entitySensorTable, or DDM specific)
+    inherit_tags = ["sysName", "sysLocation", "ifName"] # Inherit sysLocation and ifName
+
+    [[inputs.snmp.table.field]] # Placeholder for RX Power in dBm
+      name  = "cisco_rx_power_dbm"
+      oid   = "1.3.6.1.4.1.9.9.91.1.1.1.1.4" # <<< REPLACE WITH ACTUAL CISCO RX POWER OID
+    [[inputs.snmp.table.field]] # Placeholder for TX Power in dBm
+      name  = "cisco_tx_power_dbm"
+      oid   = "1.3.6.1.4.1.9.9.91.1.1.1.1.3" # <<< REPLACE WITH ACTUAL CISCO TX POWER OID
+    # Add other DDM fields like temperature, voltage, current if desired.
+  # --------------------------------------------------------------------------
+    
+###############################################################################
+# SNMP – Cisco Nexus 9000 (numeric OIDs only) - Second block of Cisco Agents
+###############################################################################
+[[inputs.snmp]]
+  interval        = "60s"
+  timeout         = "5s"
+  retries         = 2
+  max_repetitions = 10
+  agent_host_tag  = "source"
+
+  agents =["udp://192.168.2.71:161"] # Specific agent 192.168.2.71
+  
+  version = 3
+  sec_name      = "MonitorUser"
+  auth_protocol = "SHA"
+  auth_password = "StrongAuthPass@4820517##" # Assuming different password for this agent
+  priv_protocol = "AES"
+  priv_password = "StrongPrivPass@4820517##" # Assuming different password for this agent
+  sec_level     = "authPriv"
+
+  # Identity
+  [[inputs.snmp.field]]  # sysName
+    oid  = "1.3.6.1.2.1.1.5.0"
+    name = "sysName"
+    is_tag = true
+
+  [[inputs.snmp.field]]  # sysDescr
+    oid  = "1.3.6.1.2.1.1.1.0"
+    name = "sysDescr"
+    is_tag = true 
+  [[inputs.snmp.field]]  # sysUpTime
+    oid  = "1.3.6.1.2.1.1.3.0"
+    name = "sysUpTime"
+
+  [[inputs.snmp.field]]  # sysLocation (optional) - *RECOMMENDED: Configure this on your switches for building names*
+    oid  = "1.3.6.1.2.1.1.6.0"
+    name = "sysLocation"
+    is_tag = true # Make sysLocation a tag for easy filtering in Grafana
+
+  # Interfaces (64-bit counters)
+  [[inputs.snmp.table]]
+    name          = "interface"
+    oid           = "1.3.6.1.2.1.31.1.1.1"
+    inherit_tags = ["sysName", "sysLocation"] # Inherit sysLocation too
+
+    [[inputs.snmp.table.field]]  # ifName (tag)
+      name   = "ifName"
+      oid    = "1.3.6.1.2.1.31.1.1.1.1"
+      is_tag = true
+
+    [[inputs.snmp.table.field]]  # ifAlias
+      name = "ifAlias"
+      oid  = "1.3.6.1.2.1.31.1.1.1.18"
+
+    [[inputs.snmp.table.field]]  # ifHighSpeed
+      name = "ifHighSpeed"
+      oid  = "1.3.6.1.2.1.31.1.1.1.15"
+
+    [[inputs.snmp.table.field]]  # throughput
+      name = "ifHCInOctets"
+      oid  = "1.3.6.1.2.1.31.1.1.1.6"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutOctets"
+      oid  = "1.3.6.1.2.1.31.1.1.1.10"
+
+    [[inputs.snmp.table.field]]  # packet breakdown
+      name = "ifHCInUcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.7"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutUcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.11"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCInMulticastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.8"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutMulticastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.12"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCInBroadcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.9"
+
+    [[inputs.snmp.table.field]]
+      name = "ifHCOutBroadcastPkts"
+      oid  = "1.3.6.1.2.1.31.1.1.1.13"
+
+
+  # Interface status and errors (legacy ifTable, limited fields only)
+  [[inputs.snmp.table]]
+    name          = "if_status_errors"
+    oid           = "1.3.6.1.2.1.2.2.1"
+    inherit_tags = ["sysName", "sysLocation"] # Inherit sysLocation too
+
+    [[inputs.snmp.table.field]]  # ifAdminStatus
+      name = "ifAdminStatus"
+      oid  = "1.3.6.1.2.1.2.2.1.7"
+
+    [[inputs.snmp.table.field]]  # ifOperStatus
+      name = "ifOperStatus"
+      oid  = "1.3.6.1.2.1.2.2.1.8"
+
+    [[inputs.snmp.table.field]]  # errors/discards/unknown
+      name = "ifInErrors"
+      oid  = "1.3.6.1.2.1.2.2.1.14"
+
+    [[inputs.snmp.table.field]]
+      name = "ifOutErrors"
+      oid  = "1.3.6.1.2.1.2.2.1.20"
+
+    [[inputs.snmp.table.field]]
+      name = "ifInDiscards"
+      oid  = "1.3.6.1.2.1.2.2.1.13"
+
+    [[inputs.snmp.table.field]]
+      name = "ifOutDiscards"
+      oid  = "1.3.6.1.2.1.2.2.1.19"
+
+    [[inputs.snmp.table.field]]
+      name = "ifInUnknownProtos"
+      oid  = "1.3.6.1.2.1.2.2.1.15"
+
+
+  # CPU (CISCO-PROCESS-MIB, *Rev counters*)
+  [[inputs.snmp.table]]
+    name          = "cisco_cpu"
+    oid           = "1.3.6.1.4.1.9.9.109.1.1.1.1"
+    inherit_tags = ["sysName", "sysLocation"] # Inherit sysLocation too
+
+    [[inputs.snmp.table.field]]
+      name = "cpmCPUTotal5secRev"
+      oid  = "1.3.6.1.4.1.9.9.109.1.1.1.1.6"
+
+    [[inputs.snmp.table.field]]
+      name = "cpmCPUTotal1minRev"
+      oid  = "1.3.6.1.4.1.9.9.109.1.1.1.1.7"
+
+    [[inputs.snmp.table.field]]
+      name = "cpmCPUTotal5minRev"
+      oid  = "1.3.6.1.4.1.9.9.109.1.1.1.1.8"
+
+
+  # Memory (CISCO-MEMORY-POOL-MIB)
+  [[inputs.snmp.table]]
+    name          = "cisco_memory_pool"
+    oid           = "1.3.6.1.4.1.9.9.48.1.1.1"
+    inherit_tags = ["sysName", "sysLocation"] # Inherit sysLocation too
+
+    [[inputs.snmp.table.field]]  # Pool Name
+      name   = "ciscoMemoryPoolName"
+      oid    = "1.3.6.1.4.1.9.9.48.1.1.1.2"
+      is_tag = true
+
+    [[inputs.snmp.table.field]]  # Used Bytes
+      name = "ciscoMemoryPoolUsed"wher   oid   = "1.3.6.1.4.1.9.9.91.1.1.1.1.4" # <<< REPLACE WITH ACTUAL CISCO RX POWER OID
+    [[inputs.snmp.table.field]] # Placeholder for TX Power in dBm
+      name  = "cisco_tx_power_dbm"
+      oid   = "1.3.6.1.4.1.9.9.91.1.1.1.1.3" # <<< REPLACE WITH ACTUAL CISCO TX POWER OID
+    # Add other DDM fields like temperature, voltage, current if desired.
+  # --------------------------------------------------------------------------
